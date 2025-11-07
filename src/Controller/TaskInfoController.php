@@ -31,6 +31,7 @@ final class TaskInfoController extends AbstractController
                 'assigned_to_user_id' => ['type' => 'uuid', 'required' => false, 'nullable' => true],
                 'project_id' => ['type' => 'uuid', 'required' => false, 'nullable' => true],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'PERMISSION_DENIED', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 
@@ -46,6 +47,7 @@ final class TaskInfoController extends AbstractController
                 'priority' => ['type' => 'string', 'required' => false, 'nullable' => false, 'maxLength' => 50],
                 'due_date' => ['type' => 'datetime', 'required' => false, 'nullable' => true, 'format' => 'ISO-8601'],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'PERMISSION_DENIED', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 
@@ -58,6 +60,7 @@ final class TaskInfoController extends AbstractController
             'fields' => [
                 'user_id' => ['type' => 'uuid', 'required' => true, 'nullable' => false],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'PERMISSION_DENIED', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 
@@ -68,6 +71,7 @@ final class TaskInfoController extends AbstractController
             'entity' => 'task_assignment',
             'action' => 'unassign',
             'fields' => [],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'PERMISSION_DENIED', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 
@@ -80,6 +84,7 @@ final class TaskInfoController extends AbstractController
             'fields' => [
                 'project_id' => ['type' => 'uuid', 'required' => false, 'nullable' => true],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'PERMISSION_DENIED', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 
@@ -92,6 +97,7 @@ final class TaskInfoController extends AbstractController
             'fields' => [
                 'status' => ['type' => 'string', 'required' => true, 'nullable' => false, 'maxLength' => 50],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'PERMISSION_DENIED', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 }

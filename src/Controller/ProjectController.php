@@ -170,6 +170,10 @@ final class ProjectController extends AbstractController
             throw ApiProblemException::unauthorized('Authentication is required.');
         }
 
+        if (!$user->isActive()) {
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
+        }
+
         return $user;
     }
 

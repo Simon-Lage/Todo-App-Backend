@@ -13,7 +13,7 @@ final class CreateRoleRequest implements JsonRequestDto
     public function __construct(
         #[Assert\Collection(
             fields: [
-                'perm_can_crate_user' => new Assert\Type('bool'),
+                'perm_can_create_user' => new Assert\Type('bool'),
                 'perm_can_edit_user' => new Assert\Type('bool'),
                 'perm_can_read_user' => new Assert\Type('bool'),
                 'perm_can_delete_user' => new Assert\Type('bool'),

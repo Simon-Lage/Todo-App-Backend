@@ -29,6 +29,7 @@ final class UserInfoController extends AbstractController
                 'active' => ['type' => 'boolean', 'required' => false, 'nullable' => false, 'default' => true],
                 'roles' => ['type' => 'array', 'items' => ['type' => 'uuid'], 'required' => false, 'nullable' => false],
             ],
+            'errors' => ['VALIDATION_ERROR', 'CONFLICT'],
         ]);
     }
 
@@ -44,6 +45,7 @@ final class UserInfoController extends AbstractController
                 'active' => ['type' => 'boolean', 'required' => false, 'nullable' => false],
                 'roles' => ['type' => 'array', 'required' => false, 'items' => ['type' => 'uuid']],
             ],
+            'errors' => ['VALIDATION_ERROR', 'CONFLICT', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
@@ -56,6 +58,7 @@ final class UserInfoController extends AbstractController
             'fields' => [
                 'name' => ['type' => 'string', 'required' => false, 'nullable' => false, 'maxLength' => 32],
             ],
+            'errors' => ['VALIDATION_ERROR', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
@@ -66,28 +69,20 @@ final class UserInfoController extends AbstractController
             'entity' => 'user_reset_password_self',
             'action' => 'request',
             'fields' => [],
+            'errors' => ['TOKEN_INVALID', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
-    #[Route('/reset-password-admin', name: 'api_info_user_reset_password_admin', methods: ['POST'])]
-    public function resetPasswordAdmin(): JsonResponse
+    #[Route('/verify-email-for-password-reset', name: 'api_info_user_verify_email_for_password_reset', methods: ['POST'])]
+    public function verifyEmailForPasswordReset(): JsonResponse
     {
         return $this->responseFactory->single([
-            'entity' => 'user_reset_password_admin',
-            'action' => 'issue',
-            'fields' => [],
-        ]);
-    }
-
-    #[Route('/forgot-password', name: 'api_info_user_forgot_password', methods: ['POST'])]
-    public function forgotPassword(): JsonResponse
-    {
-        return $this->responseFactory->single([
-            'entity' => 'user_forgot_password',
-            'action' => 'request',
+            'entity' => 'user_verify_password_reset_email',
+            'action' => 'verify',
             'fields' => [
                 'email' => ['type' => 'string', 'required' => true, 'nullable' => false, 'format' => 'email'],
             ],
+            'errors' => ['RESOURCE_NOT_FOUND', 'USED_ACCOUNT_IS_INACTIVE', 'EMAIL_DOES_NOT_MATCH'],
         ]);
     }
 
@@ -98,6 +93,7 @@ final class UserInfoController extends AbstractController
             'entity' => 'user',
             'action' => 'deactivate',
             'fields' => [],
+            'errors' => ['RESOURCE_NOT_FOUND', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
@@ -108,6 +104,20 @@ final class UserInfoController extends AbstractController
             'entity' => 'user',
             'action' => 'reactivate',
             'fields' => [],
+            'errors' => ['RESOURCE_NOT_FOUND', 'USED_ACCOUNT_IS_INACTIVE'],
+        ]);
+    }
+
+    #[Route('/obfuscated-email', name: 'api_info_user_obfuscated_email', methods: ['POST'])]
+    public function obfuscatedEmail(): JsonResponse
+    {
+        return $this->responseFactory->single([
+            'entity' => 'user_obfuscated_email',
+            'action' => 'read',
+            'fields' => [
+                'id' => ['type' => 'uuid', 'required' => true, 'nullable' => false, 'location' => 'path'],
+            ],
+            'errors' => ['RESOURCE_NOT_FOUND'],
         ]);
     }
 }

@@ -20,7 +20,7 @@ use App\Task\View\TaskSummaryViewFactory;
 use App\Project\View\ProjectSummaryViewFactory;
 use App\User\Dto\AdminUpdateUserRequest;
 use App\User\Dto\CreateUserRequest;
-use App\User\Dto\ForgotPasswordRequest;
+use App\User\Dto\VerifyPasswordResetEmailRequest;
 use App\User\Dto\SelfUpdateUserRequest;
 use App\User\Service\UserNotificationService;
 use App\User\Service\UserQueryService;
@@ -96,6 +96,16 @@ final class UserController extends AbstractController
         return $this->responseFactory->single($this->userViewFactory->make($user));
     }
 
+    #[Route('/obfuscated-email/{id}', name: 'api_user_obfuscated_email', methods: ['GET'])]
+    public function obfuscatedEmail(string $id): JsonResponse
+    {
+        $user = $this->findUser($id);
+
+        return $this->responseFactory->single([
+            'email' => $this->obfuscateEmail((string) $user->getEmail()),
+        ]);
+    }
+
     #[Route('/list', name: 'api_user_list', methods: ['GET'])]
     #[IsGranted('perm:perm_can_read_user')]
     public function list(Request $request): JsonResponse
@@ -130,7 +140,7 @@ final class UserController extends AbstractController
     }
 
     #[Route('', name: 'api_user_create', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_crate_user')]
+    #[IsGranted('perm:perm_can_create_user')]
     public function create(CreateUserRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
@@ -210,23 +220,6 @@ final class UserController extends AbstractController
         return $this->responseFactory->single(['message' => 'User reactivated.']);
     }
 
-    #[Route('/reset-password/{id}', name: 'api_user_reset_password_admin', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_edit_user')]
-    public function resetPasswordForUser(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
-    {
-        $actor = $this->requireUser($currentUser);
-        $user = $this->findUser($id);
-        $temporaryPassword = $this->userService->generateTemporaryPassword();
-        $this->userService->setTemporaryPassword($user, $temporaryPassword);
-        $this->notificationService->sendTemporaryPassword($user, $temporaryPassword);
-
-        $this->auditLogger->record('user.reset_password_admin', $actor, [
-            'target_user_id' => $user->getId()?->toRfc4122(),
-        ]);
-
-        return $this->responseFactory->single(['message' => 'Temporary password issued.']);
-    }
-
     #[Route('/reset-password', name: 'api_user_reset_password_self', methods: ['POST'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function resetPasswordSelf(#[CurrentUser] ?UserInterface $user): JsonResponse
@@ -243,17 +236,26 @@ final class UserController extends AbstractController
         return $this->responseFactory->single(['message' => 'Reset link sent.']);
     }
 
-    #[Route('/forgot-password', name: 'api_user_forgot_password', methods: ['POST'])]
-    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    #[Route('/verify-email-for-password-reset/{id}', name: 'api_user_verify_email_for_password_reset', methods: ['POST'])]
+    public function verifyEmailForPasswordReset(string $id, VerifyPasswordResetEmailRequest $request): JsonResponse
     {
-        $user = $this->userRepository->findOneBy(['email' => strtolower($request->email)]);
+        $user = $this->findUser($id);
 
-        if ($user instanceof User && $user->isActive()) {
-            $token = $this->passwordResetTokenService->create($user);
-            $this->notificationService->sendPasswordResetLink($user, $token);
+        if (!$user->isActive()) {
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'User account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
         }
 
-        return $this->responseFactory->single(['message' => 'If the account exists, a reset link has been sent.']);
+        $provided = strtolower($request->email);
+        $actual = strtolower((string) $user->getEmail());
+
+        if (!hash_equals($actual, $provided)) {
+            throw ApiProblemException::fromStatus(422, 'Unprocessable Entity', 'Email does not match our records.', 'EMAIL_DOES_NOT_MATCH');
+        }
+
+        $token = $this->passwordResetTokenService->create($user);
+        $this->notificationService->sendPasswordResetLink($user, $token);
+
+        return $this->responseFactory->single(['message' => 'Password reset email dispatched.']);
     }
 
     #[Route('/{id}/tasks', name: 'api_user_tasks', methods: ['GET'])]
@@ -359,6 +361,24 @@ final class UserController extends AbstractController
         return $user;
     }
 
+    private function obfuscateEmail(string $email): string
+    {
+        $email = trim($email);
+        if ($email === '' || !str_contains($email, '@')) {
+            return '***';
+        }
+
+        [$localPart, $domain] = explode('@', $email, 2);
+
+        $localVisible = min(3, max(1, strlen($localPart)));
+        $domainVisible = min(1, max(1, strlen($domain)));
+
+        $localPart = substr($localPart, 0, $localVisible);
+        $domain = substr($domain, 0, $domainVisible);
+
+        return sprintf('%s...@%s...', $localPart, $domain);
+    }
+
     private function resolvePagination(Request $request, array $allowedSorts): array
     {
         $offset = max(0, (int) $request->query->get('offset', 0));
@@ -429,6 +449,10 @@ final class UserController extends AbstractController
     {
         if (!$user instanceof User) {
             throw ApiProblemException::unauthorized('Authentication is required.');
+        }
+
+        if (!$user->isActive()) {
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
         }
 
         return $user;

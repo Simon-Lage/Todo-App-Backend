@@ -34,11 +34,12 @@ Geplante Struktur für die Datenbank:
         },
         "user_to_role": {
             "user_id": "uuid NOT NULL",
-            "role": "uuid NOT NULL"
+            "role_id": "uuid NOT NULL",
+            "PRIMARY": "PRIMARY KEY (user_id, role_id)"
         },
         "role": {
             "id": "uuid PRIMARY KEY",
-            "perm_can_crate_user": "boolean NOT NULL",
+            "perm_can_create_user": "boolean NOT NULL",
             "perm_can_edit_user": "boolean NOT NULL",
             "perm_can_read_user": "boolean NOT NULL",
             "perm_can_delete_user": "boolean NOT NULL",
@@ -73,7 +74,7 @@ Geplante Struktur für die Datenbank:
             "created_at": "DateTimeImmutable NOT NULL",
             "updated_at": "TIMESTAMP NULL"
         },
-        "images": {
+        "image": {
             "id": "uuid PRIMARY KEY",
             "file_type": "STRING(10) NOT NULL",
             "file_size": "INT NOT NULL",
@@ -90,6 +91,19 @@ Geplante Struktur für die Datenbank:
             "performed_by_user_id": "uuid NOT NULL",
             "performed_at": "DateTimeImmutable NOT NULL",
             "details": "TEXT NULL"
+        },
+        "password_reset_tokens": {
+            "id": "uuid PRIMARY KEY",
+            "user_id": "uuid NOT NULL",
+            "token_digest": "STRING(64) NOT NULL UNIQUE",
+            "expires_at": "DateTimeImmutable NOT NULL",
+            "created_at": "DateTimeImmutable NOT NULL",
+            "used_at": "DateTimeImmutable NULL",
+            "on_delete": "CASCADE"
+        },
+        "app_config": {
+            "id": "uuid PRIMARY KEY",
+            "allowed_email_domains": "JSON NOT NULL"
         }
     }
 }
@@ -99,7 +113,7 @@ Wichtige Infos zu Images:
 
 * Ein Image kann entweder einem Projekt, einer Task oder einem User zugeordnet sein.
 * Der Typ des Images wird im Feld `type` gespeichert: `profile_picture`, `project_image`, `task_image`.
-* Es gibt keine direkte Beziehung zwischen Images und anderen Tabellen, sondern nur über die `project_id`, `task_id` oder `user_id`.
+* Die Zuordnungen werden über optionale Foreign Keys (`project_id`, `task_id`, `user_id`) abgebildet; `uploaded_by_user_id` ist Pflicht.
 * Die Logs-Tabelle speichert nur sinnvolle Aktionen, wie Löschen, Erstellen, Updaten von Usern, Projekten, Tasks und Änderungen an Rollen etc.
 * Die Logs-Tabelle speichert keine Login-Versuche oder ähnliches und darf niemals mehr als 5 GB groß werden. Ältere Logs müssen regelmäßig und automatisch gelöscht werden.
 
@@ -108,6 +122,7 @@ Wichtige Infos zu Images:
 # Endpunkte
 
 Mit welcher Rolle welcher Endpunkt aufgerufen werden kann, kann den Rollen entnommen werden.
+Jeder Daten-Endpunkt besitzt ein `/api/info/*`-Gegenstück, das neben den erwarteten Feldern auch alle potenziellen Fehlercodes (z. B. `USED_ACCOUNT_IS_INACTIVE`, `EMAIL_ISNT_COMPANY_EMAIL`, `USERNAME_ALREADY_IN_USE`) beschreibt.
 Nutzer, die sich selbst zum Ziel haben, haben natürlich erhöhte Rechte im üblichen Rahmen.
 
 Welche Berechtigungen ein Nutzer hat, wird über eine eigene Funktion geprüft.
@@ -124,6 +139,7 @@ Dafür braucht es natürlich auch einen Endpunkt, der die Permissions des Nutzer
 * `POST /api/auth/logout` – invalidiert/entfernt die aktuelle Session bzw. den Refresh-Token.
 * `POST /api/auth/change-password` – für eingeloggte Nutzer: `{ current_password, new_password }`.
 * `POST /api/auth/reset-password/confirm` – `{ token, new_password }` – Abschluss des Reset-Flows aus Forgot/Reset.
+* `POST /api/auth/register` – legt einen neuen, zunächst inaktiven Account mit Firmen-E-Mail an.
 
 ---
 
@@ -131,10 +147,10 @@ Dafür braucht es natürlich auch einen Endpunkt, der die Permissions des Nutzer
 
 * `GET /api/user` – gibt den eingeloggten User zurück, aber natürlich niemals `temporary_password_created_at`, `is_password_temporary`, `password`.
 * `GET /api/user/{id}` – gibt den User mit der angegebenen ID zurück (ohne sensible Felder wie oben).
+* `GET /api/user/obfuscated-email/{id}` – liefert eine maskierte Variante der E-Mail (z. B. `max...@g...`) zur Anzeige im Reset-Flow.
 * `GET /api/user/by-role/{role_id}` – gibt alle User mit der angegebenen Rolle zurück.
-* `POST /api/user/reset-password/{id}` – sendet dem User eine E-Mail mit einem neuen temporären Passwort – darf nur mit `perm_can_edit_user` ausgeführt werden.
 * `POST /api/user/reset-password` – sendet dem eingeloggten User eine E-Mail mit einem Link zum Zurücksetzen des Passworts.
-* `POST /api/user/forgot-password` – im Body soll die E-Mail sein, sendet dem User eine E-Mail mit einem Link zum Zurücksetzen des Passworts.
+* `POST /api/user/verify-email-for-password-reset/{id}` – nimmt die vollständige E-Mail entgegen, vergleicht sie mit dem Benutzerkonto und versendet anschließend den Reset-Link.
 * `POST /api/user` – erstellt einen neuen User.
 * `PATCH /api/user` – aktualisiert eigene Profildaten (z. B. `name`); Felder serverseitig whitelisten.
 * `PATCH /api/user/{id}` – Admin-Update für Nutzer (Permissions erforderlich).
@@ -176,8 +192,9 @@ Dafür braucht es natürlich auch einen Endpunkt, der die Permissions des Nutzer
 * `POST /api/task` – erstellt eine neue Task.
 * `PATCH /api/task/{id}` – passt die Task mit der angegebenen ID an.
 * `GET /api/task/list`
-* **Aktionsendpunkte:**
 
+
+* **Aktionsendpunkte:**
   * `POST /api/task/{id}/assign-user` – Body: `{ user_id }`.
   * `POST /api/task/{id}/unassign-user`
   * `POST /api/task/{id}/move-to-project` – Body: `{ project_id }`.

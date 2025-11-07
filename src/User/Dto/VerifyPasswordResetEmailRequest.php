@@ -7,7 +7,7 @@ namespace App\User\Dto;
 use App\Http\Request\JsonRequestDto;
 use Symfony\Component\Validator\Constraints as Assert;
 
-final class ForgotPasswordRequest implements JsonRequestDto
+final class VerifyPasswordResetEmailRequest implements JsonRequestDto
 {
     public function __construct(
         #[Assert\NotBlank]

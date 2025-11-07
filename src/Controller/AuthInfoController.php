@@ -26,6 +26,7 @@ final class AuthInfoController extends AbstractController
                 'email' => ['type' => 'string', 'required' => true, 'nullable' => false, 'format' => 'email'],
                 'password' => ['type' => 'string', 'required' => true, 'nullable' => false],
             ],
+            'errors' => ['TOKEN_INVALID', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
@@ -38,6 +39,7 @@ final class AuthInfoController extends AbstractController
             'fields' => [
                 'refresh_token' => ['type' => 'string', 'required' => true, 'nullable' => false],
             ],
+            'errors' => ['TOKEN_INVALID', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
@@ -50,6 +52,7 @@ final class AuthInfoController extends AbstractController
             'fields' => [
                 'refresh_token' => ['type' => 'string', 'required' => true, 'nullable' => false],
             ],
+            'errors' => ['TOKEN_INVALID', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
@@ -63,6 +66,7 @@ final class AuthInfoController extends AbstractController
                 'current_password' => ['type' => 'string', 'required' => true, 'nullable' => false],
                 'new_password' => ['type' => 'string', 'required' => true, 'nullable' => false, 'minLength' => 12],
             ],
+            'errors' => ['VALIDATION_ERROR', 'USED_ACCOUNT_IS_INACTIVE'],
         ]);
     }
 
@@ -76,6 +80,23 @@ final class AuthInfoController extends AbstractController
                 'token' => ['type' => 'string', 'required' => true, 'nullable' => false],
                 'new_password' => ['type' => 'string', 'required' => true, 'nullable' => false, 'minLength' => 12],
             ],
+            'errors' => ['TOKEN_INVALID'],
+        ]);
+    }
+
+    #[Route('/register', name: 'api_info_auth_register', methods: ['POST'])]
+    public function register(): JsonResponse
+    {
+        return $this->responseFactory->single([
+            'entity' => 'auth_register',
+            'action' => 'create',
+            'fields' => [
+                'name' => ['type' => 'string', 'required' => true, 'nullable' => false, 'maxLength' => 32],
+                'email' => ['type' => 'string', 'required' => true, 'nullable' => false, 'format' => 'email', 'maxLength' => 128],
+                'password' => ['type' => 'string', 'required' => true, 'nullable' => false, 'minLength' => 12, 'maxLength' => 255],
+                'active' => ['type' => 'boolean', 'required' => false, 'nullable' => false, 'ignored' => true],
+            ],
+            'errors' => ['USERNAME_ALREADY_IN_USE', 'EMAIL_ALREADY_IN_USE', 'EMAIL_ISNT_COMPANY_EMAIL'],
         ]);
     }
 }

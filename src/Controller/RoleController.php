@@ -84,7 +84,7 @@ final class RoleController extends AbstractController
     }
 
     #[Route('', name: 'api_role_create', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_crate_user')]
+    #[IsGranted('perm:perm_can_create_user')]
     public function create(CreateRoleRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
@@ -212,6 +212,10 @@ final class RoleController extends AbstractController
     {
         if (!$user instanceof User) {
             throw ApiProblemException::unauthorized('Authentication is required.');
+        }
+
+        if (!$user->isActive()) {
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
         }
 
         return $user;

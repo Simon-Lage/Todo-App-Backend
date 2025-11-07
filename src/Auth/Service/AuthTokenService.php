@@ -50,9 +50,14 @@ final class AuthTokenService
 
         $user = $this->userRepository->findOneBy(['email' => $storedToken->getUsername()]);
 
-        if (!$user instanceof User || !$user->isActive()) {
+        if (!$user instanceof User) {
             $this->refreshTokenManager->delete($storedToken);
-            throw ApiProblemException::forbidden('Account is inactive.');
+            throw ApiProblemException::unauthorized('Authentication is required.');
+        }
+
+        if (!$user->isActive()) {
+            $this->refreshTokenManager->delete($storedToken);
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
         }
 
         $this->refreshTokenManager->delete($storedToken);

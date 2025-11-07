@@ -26,6 +26,7 @@ final class ProjectInfoController extends AbstractController
                 'name' => ['type' => 'string', 'required' => true, 'nullable' => false, 'maxLength' => 255, 'unique' => true],
                 'description' => ['type' => 'string', 'required' => false, 'nullable' => true, 'maxLength' => 65535],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'CONFLICT'],
         ]);
     }
 
@@ -39,6 +40,7 @@ final class ProjectInfoController extends AbstractController
                 'name' => ['type' => 'string', 'required' => false, 'nullable' => false, 'maxLength' => 255, 'unique' => true],
                 'description' => ['type' => 'string', 'required' => false, 'nullable' => true, 'maxLength' => 65535],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'CONFLICT', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 }

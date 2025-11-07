@@ -24,6 +24,7 @@ final class RoleInfoController extends AbstractController
             'entity' => 'role',
             'action' => 'create',
             'fields' => $this->permissionFields(required: false, default: false),
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'CONFLICT'],
         ]);
     }
 
@@ -34,6 +35,7 @@ final class RoleInfoController extends AbstractController
             'entity' => 'role',
             'action' => 'update',
             'fields' => $this->permissionFields(required: false, default: null),
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 
@@ -46,6 +48,7 @@ final class RoleInfoController extends AbstractController
             'fields' => [
                 'roles' => ['type' => 'array', 'required' => true, 'nullable' => false, 'items' => ['type' => 'uuid']],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 

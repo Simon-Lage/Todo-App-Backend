@@ -38,6 +38,7 @@ final class SearchInfoController extends AbstractController
                     ],
                 ],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'PERMISSION_DENIED', 'VALIDATION_ERROR'],
         ]);
     }
 }

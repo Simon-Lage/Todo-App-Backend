@@ -14,7 +14,7 @@ class Role
     private ?Uuid $id = null;
 
     #[ORM\Column]
-    private ?bool $perm_can_crate_user = null;
+    private ?bool $perm_can_create_user = null;
 
     #[ORM\Column]
     private ?bool $perm_can_edit_user = null;
@@ -67,12 +67,12 @@ class Role
 
     public function isPermCanCrateUser(): ?bool
     {
-        return $this->perm_can_crate_user;
+        return $this->perm_can_create_user;
     }
 
-    public function setPermCanCrateUser(bool $perm_can_crate_user): static
+    public function setPermCanCrateUser(bool $perm_can_create_user): static
     {
-        $this->perm_can_crate_user = $perm_can_crate_user;
+        $this->perm_can_create_user = $perm_can_create_user;
         return $this;
     }
 

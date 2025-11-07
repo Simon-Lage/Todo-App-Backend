@@ -8,7 +8,9 @@ use App\Auth\Dto\ChangePasswordRequest;
 use App\Auth\Dto\LoginRequest;
 use App\Auth\Dto\LogoutRequest;
 use App\Auth\Dto\RefreshTokenRequest;
+use App\Auth\Dto\RegisterRequest;
 use App\Auth\Dto\ResetPasswordConfirmRequest;
+use App\Config\Service\ConfigService;
 use App\Auth\Service\AuthTokenService;
 use App\Auth\Service\PasswordResetTokenService;
 use App\Entity\User;
@@ -22,6 +24,7 @@ use App\User\View\UserViewFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -42,7 +45,8 @@ final class AuthController extends AbstractController
         private readonly PasswordResetTokenService $passwordResetTokenService,
         private readonly UserViewFactory $userViewFactory,
         private readonly UserService $userService,
-        private readonly AuditLogger $auditLogger
+        private readonly AuditLogger $auditLogger,
+        private readonly ConfigService $configService
     ) {
     }
 
@@ -52,15 +56,15 @@ final class AuthController extends AbstractController
         $user = $this->userRepository->findOneBy(['email' => strtolower($request->email)]);
 
         if (!$user instanceof User) {
-            throw ApiProblemException::unauthorized('Invalid credentials.');
+            throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
         }
 
         if (!$user->isActive()) {
-            throw ApiProblemException::forbidden('Account is inactive.');
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
         }
 
         if (!$this->passwordHasher->isPasswordValid($user, $request->password)) {
-            throw ApiProblemException::unauthorized('Invalid credentials.');
+            throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
         }
 
         $user->setLastLoginAt(new \DateTime());
@@ -93,13 +97,11 @@ final class AuthController extends AbstractController
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function logout(LogoutRequest $request, #[CurrentUser] ?UserInterface $user): JsonResponse
     {
-        if (!$user instanceof User) {
-            throw ApiProblemException::unauthorized('Authentication is required.');
-        }
+        $account = $this->requireActiveUser($user);
 
-        $this->authTokenService->revokeForUser($request->refreshToken, $user);
+        $this->authTokenService->revokeForUser($request->refreshToken, $account);
 
-        $this->auditLogger->record('auth.logout', $user, []);
+        $this->auditLogger->record('auth.logout', $account, []);
 
         return $this->responseFactory->single(['message' => 'Logout successful.']);
     }
@@ -108,17 +110,15 @@ final class AuthController extends AbstractController
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function changePassword(ChangePasswordRequest $request, #[CurrentUser] ?UserInterface $user): JsonResponse
     {
-        if (!$user instanceof User) {
-            throw ApiProblemException::unauthorized('Authentication is required.');
-        }
+        $account = $this->requireActiveUser($user);
 
-        if (!$this->passwordHasher->isPasswordValid($user, $request->currentPassword)) {
+        if (!$this->passwordHasher->isPasswordValid($account, $request->currentPassword)) {
             throw ApiProblemException::validation(['current_password' => ['Current password is incorrect.']]);
         }
 
-        $this->userService->setPassword($user, $request->newPassword);
+        $this->userService->setPassword($account, $request->newPassword);
 
-        $this->auditLogger->record('auth.change_password', $user, []);
+        $this->auditLogger->record('auth.change_password', $account, []);
 
         return $this->responseFactory->single(['message' => 'Password updated.']);
     }
@@ -144,5 +144,45 @@ final class AuthController extends AbstractController
             'user' => $this->userViewFactory->make($user),
             'permissions' => $this->permissionRegistry->resolve($user),
         ]);
+    }
+
+    #[Route('/register', name: 'api_auth_register', methods: ['POST'])]
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        $email = strtolower($request->email);
+
+        $this->configService->assertCompanyEmail($email);
+
+        $existingByName = $this->userRepository->findOneBy(['name' => $request->name]);
+        if ($existingByName instanceof User) {
+            throw ApiProblemException::fromStatus(409, 'Conflict', 'Username already in use.', 'USERNAME_ALREADY_IN_USE');
+        }
+
+        $existingByEmail = $this->userRepository->findOneBy(['email' => $email]);
+        if ($existingByEmail instanceof User) {
+            throw ApiProblemException::fromStatus(409, 'Conflict', 'Email already in use.', 'EMAIL_ALREADY_IN_USE');
+        }
+
+        $user = $this->userService->create($request->name, $email, $request->password, false, []);
+
+        $this->auditLogger->record('auth.register', $user, []);
+
+        return $this->responseFactory->single([
+            'user' => $this->userViewFactory->make($user),
+            'message' => 'Registration received. Account pending activation.',
+        ], [], Response::HTTP_CREATED);
+    }
+
+    private function requireActiveUser(?UserInterface $user): User
+    {
+        if (!$user instanceof User) {
+            throw ApiProblemException::unauthorized('Authentication is required.');
+        }
+
+        if (!$user->isActive()) {
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
+        }
+
+        return $user;
     }
 }

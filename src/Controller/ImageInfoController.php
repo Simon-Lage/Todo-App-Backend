@@ -32,6 +32,7 @@ final class ImageInfoController extends AbstractController
             'relations' => [
                 'exactly_one_of' => ['user_id', 'project_id', 'task_id'],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'PAYLOAD_TOO_LARGE'],
         ]);
     }
 
@@ -50,6 +51,7 @@ final class ImageInfoController extends AbstractController
             'relations' => [
                 'max_one_of' => ['user_id', 'project_id', 'task_id'],
             ],
+            'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'RESOURCE_NOT_FOUND'],
         ]);
     }
 }

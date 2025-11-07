@@ -10,7 +10,7 @@ use App\Entity\User;
 final class PermissionRegistry
 {
     public const MAP = [
-        'perm_can_crate_user' => 'isPermCanCrateUser',
+        'perm_can_create_user' => 'isPermCanCrateUser',
         'perm_can_edit_user' => 'isPermCanEditUser',
         'perm_can_read_user' => 'isPermCanReadUser',
         'perm_can_delete_user' => 'isPermCanDeleteUser',
