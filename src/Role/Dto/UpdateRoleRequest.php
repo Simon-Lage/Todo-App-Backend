@@ -11,12 +11,19 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class UpdateRoleRequest implements JsonRequestDto
 {
     public function __construct(
+        #[Assert\Length(max: 100)]
+        #[Assert\NotBlank(allowNull: true)]
+        public readonly ?string $name,
         #[Assert\Collection(
             fields: [
                 'perm_can_create_user' => new Assert\Type('bool'),
                 'perm_can_edit_user' => new Assert\Type('bool'),
                 'perm_can_read_user' => new Assert\Type('bool'),
                 'perm_can_delete_user' => new Assert\Type('bool'),
+                'perm_can_create_roles' => new Assert\Type('bool'),
+                'perm_can_edit_roles' => new Assert\Type('bool'),
+                'perm_can_read_roles' => new Assert\Type('bool'),
+                'perm_can_delete_roles' => new Assert\Type('bool'),
                 'perm_can_create_tasks' => new Assert\Type('bool'),
                 'perm_can_edit_tasks' => new Assert\Type('bool'),
                 'perm_can_read_all_tasks' => new Assert\Type('bool'),
@@ -44,10 +51,19 @@ final class UpdateRoleRequest implements JsonRequestDto
             }
         }
 
-        if ($provided === []) {
-            throw new \InvalidArgumentException('No permission flags provided.');
+        $name = array_key_exists('name', $payload) ? (string) $payload['name'] : null;
+        if ($name !== null) {
+            $name = trim($name);
+
+            if ($name == '') {
+                $name = null;
+            }
         }
 
-        return new self($provided);
+        if ($provided === [] && $name === null) {
+            throw new \InvalidArgumentException('No role updates provided.');
+        }
+
+        return new self($name, $provided);
     }
 }

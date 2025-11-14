@@ -13,6 +13,9 @@ class Role
     #[ORM\Column(type: 'uuid', unique: true)]
     private ?Uuid $id = null;
 
+    #[ORM\Column(length: 100, unique: true)]
+    private ?string $name = null;
+
     #[ORM\Column]
     private ?bool $perm_can_create_user = null;
 
@@ -24,6 +27,18 @@ class Role
 
     #[ORM\Column]
     private ?bool $perm_can_delete_user = null;
+
+    #[ORM\Column]
+    private ?bool $perm_can_create_roles = null;
+
+    #[ORM\Column]
+    private ?bool $perm_can_edit_roles = null;
+
+    #[ORM\Column]
+    private ?bool $perm_can_read_roles = null;
+
+    #[ORM\Column]
+    private ?bool $perm_can_delete_roles = null;
 
     #[ORM\Column]
     private ?bool $perm_can_create_tasks = null;
@@ -63,6 +78,18 @@ class Role
     public function getId(): ?Uuid
     {
         return $this->id;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
+
+        return $this;
     }
 
     public function isPermCanCrateUser(): ?bool
@@ -106,6 +133,50 @@ class Role
     public function setPermCanDeleteUser(bool $perm_can_delete_user): static
     {
         $this->perm_can_delete_user = $perm_can_delete_user;
+        return $this;
+    }
+
+    public function isPermCanCreateRoles(): ?bool
+    {
+        return $this->perm_can_create_roles;
+    }
+
+    public function setPermCanCreateRoles(bool $perm_can_create_roles): static
+    {
+        $this->perm_can_create_roles = $perm_can_create_roles;
+        return $this;
+    }
+
+    public function isPermCanEditRoles(): ?bool
+    {
+        return $this->perm_can_edit_roles;
+    }
+
+    public function setPermCanEditRoles(bool $perm_can_edit_roles): static
+    {
+        $this->perm_can_edit_roles = $perm_can_edit_roles;
+        return $this;
+    }
+
+    public function isPermCanReadRoles(): ?bool
+    {
+        return $this->perm_can_read_roles;
+    }
+
+    public function setPermCanReadRoles(bool $perm_can_read_roles): static
+    {
+        $this->perm_can_read_roles = $perm_can_read_roles;
+        return $this;
+    }
+
+    public function isPermCanDeleteRoles(): ?bool
+    {
+        return $this->perm_can_delete_roles;
+    }
+
+    public function setPermCanDeleteRoles(bool $perm_can_delete_roles): static
+    {
+        $this->perm_can_delete_roles = $perm_can_delete_roles;
         return $this;
     }
 

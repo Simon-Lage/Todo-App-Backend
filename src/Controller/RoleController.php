@@ -42,7 +42,7 @@ final class RoleController extends AbstractController
     }
 
     #[Route('/list', name: 'api_role_list', methods: ['GET'])]
-    #[IsGranted('perm:perm_can_read_user')]
+    #[IsGranted('perm:perm_can_read_roles')]
     public function list(Request $request): JsonResponse
     {
         $offset = max(0, (int) $request->query->get('offset', 0));
@@ -75,7 +75,7 @@ final class RoleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'api_role_show', methods: ['GET'])]
-    #[IsGranted('perm:perm_can_read_user')]
+    #[IsGranted('perm:perm_can_read_roles')]
     public function show(string $id): JsonResponse
     {
         $role = $this->findRole($id);
@@ -84,11 +84,11 @@ final class RoleController extends AbstractController
     }
 
     #[Route('', name: 'api_role_create', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_create_user')]
+    #[IsGranted('perm:perm_can_create_roles')]
     public function create(CreateRoleRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
-        $role = $this->roleService->create($request->permissions);
+        $role = $this->roleService->create($request->name, $request->permissions);
 
         $this->auditLogger->record('role.create', $actor, [
             'role_id' => $role->getId()?->toRfc4122(),
@@ -103,12 +103,12 @@ final class RoleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'api_role_update', methods: ['PATCH'])]
-    #[IsGranted('perm:perm_can_edit_user')]
+    #[IsGranted('perm:perm_can_edit_roles')]
     public function update(string $id, UpdateRoleRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $role = $this->findRole($id);
-        $updated = $this->roleService->update($role, $request->permissions);
+        $updated = $this->roleService->update($role, $request->name, $request->permissions);
 
         $this->auditLogger->record('role.update', $actor, [
             'role_id' => $role->getId()?->toRfc4122(),
@@ -119,7 +119,7 @@ final class RoleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'api_role_delete', methods: ['DELETE'])]
-    #[IsGranted('perm:perm_can_delete_user')]
+    #[IsGranted('perm:perm_can_delete_roles')]
     public function delete(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
@@ -135,7 +135,7 @@ final class RoleController extends AbstractController
     }
 
     #[Route('/by-user/{userId}', name: 'api_role_by_user', methods: ['GET'])]
-    #[IsGranted('perm:perm_can_read_user')]
+    #[IsGranted('perm:perm_can_read_roles')]
     public function rolesByUser(string $userId): JsonResponse
     {
         $user = $this->findUser($userId);
@@ -150,7 +150,7 @@ final class RoleController extends AbstractController
     }
 
     #[Route('/by-user/{userId}', name: 'api_role_assign', methods: ['PATCH'])]
-    #[IsGranted('perm:perm_can_edit_user')]
+    #[IsGranted('perm:perm_can_edit_roles')]
     public function assign(string $userId, AssignRolesRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);

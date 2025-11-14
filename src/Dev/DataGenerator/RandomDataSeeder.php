@@ -21,6 +21,10 @@ final class RandomDataSeeder
             'perm_can_edit_user' => true,
             'perm_can_read_user' => true,
             'perm_can_delete_user' => true,
+            'perm_can_create_roles' => true,
+            'perm_can_edit_roles' => true,
+            'perm_can_read_roles' => true,
+            'perm_can_delete_roles' => true,
             'perm_can_create_tasks' => true,
             'perm_can_edit_tasks' => true,
             'perm_can_read_all_tasks' => true,
@@ -37,6 +41,10 @@ final class RandomDataSeeder
             'perm_can_edit_user' => false,
             'perm_can_read_user' => true,
             'perm_can_delete_user' => false,
+            'perm_can_create_roles' => false,
+            'perm_can_edit_roles' => false,
+            'perm_can_read_roles' => true,
+            'perm_can_delete_roles' => false,
             'perm_can_create_tasks' => true,
             'perm_can_edit_tasks' => true,
             'perm_can_read_all_tasks' => true,
@@ -53,6 +61,10 @@ final class RandomDataSeeder
             'perm_can_edit_user' => false,
             'perm_can_read_user' => false,
             'perm_can_delete_user' => false,
+            'perm_can_create_roles' => false,
+            'perm_can_edit_roles' => false,
+            'perm_can_read_roles' => false,
+            'perm_can_delete_roles' => false,
             'perm_can_create_tasks' => false,
             'perm_can_edit_tasks' => true,
             'perm_can_read_all_tasks' => false,
@@ -200,6 +212,7 @@ final class RandomDataSeeder
         $catalog = [];
         foreach (self::ROLE_PROFILES as $slug => $permissions) {
             $role = new Role();
+            $role->setName($slug);
             foreach ($permissions as $permission => $value) {
                 $getter = PermissionRegistry::MAP[$permission] ?? null;
                 if ($getter === null) {

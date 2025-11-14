@@ -9,14 +9,14 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/priorities')]
 final class PriorityController extends AbstractController
 {
-    private const PRIORITIES = [
+    private const array PRIORITIES = [
         'low' => 'Low',
         'medium' => 'Medium',
         'high' => 'High',
         'urgent' => 'Urgent'
     ];
 
-    private const STATUSES = [
+    private const array STATUSES = [
         'open' => 'Open',
         'in_progress' => 'In Progress',
         'review' => 'Review',

@@ -18,9 +18,10 @@ final class RoleService
     {
     }
 
-    public function create(array $permissions): Role
+    public function create(string $name, array $permissions): Role
     {
         $role = new Role();
+        $role->setName($name);
         $this->applyPermissions($role, $permissions);
         $this->entityManager->persist($role);
         $this->entityManager->flush();
@@ -28,8 +29,12 @@ final class RoleService
         return $role;
     }
 
-    public function update(Role $role, array $permissions): Role
+    public function update(Role $role, ?string $name, array $permissions): Role
     {
+        if ($name !== null) {
+            $role->setName($name);
+        }
+
         $current = $this->extractPermissions($role);
         foreach ($permissions as $permission => $value) {
             $current[$permission] = (bool) $value;

@@ -23,7 +23,17 @@ final class RoleInfoController extends AbstractController
         return $this->responseFactory->single([
             'entity' => 'role',
             'action' => 'create',
-            'fields' => $this->permissionFields(required: false, default: false),
+            'fields' => array_merge(
+                [
+                    'name' => [
+                        'type' => 'string',
+                        'required' => true,
+                        'nullable' => false,
+                        'maxLength' => 100,
+                    ],
+                ],
+                $this->permissionFields(required: false, default: false)
+            ),
             'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'CONFLICT'],
         ]);
     }
@@ -34,7 +44,17 @@ final class RoleInfoController extends AbstractController
         return $this->responseFactory->single([
             'entity' => 'role',
             'action' => 'update',
-            'fields' => $this->permissionFields(required: false, default: null),
+            'fields' => array_merge(
+                [
+                    'name' => [
+                        'type' => 'string',
+                        'required' => false,
+                        'nullable' => false,
+                        'maxLength' => 100,
+                    ],
+                ],
+                $this->permissionFields(required: false, default: null)
+            ),
             'errors' => ['USED_ACCOUNT_IS_INACTIVE', 'VALIDATION_ERROR', 'RESOURCE_NOT_FOUND'],
         ]);
     }

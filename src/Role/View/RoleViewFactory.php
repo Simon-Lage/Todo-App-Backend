@@ -11,7 +11,10 @@ final class RoleViewFactory
 {
     public function make(Role $role): array
     {
-        $payload = ['id' => $role->getId()?->toRfc4122()];
+        $payload = [
+            'id' => $role->getId()?->toRfc4122(),
+            'name' => $role->getName(),
+        ];
 
         foreach (PermissionRegistry::MAP as $key => $getter) {
             $payload[$key] = (bool) $role->$getter();
