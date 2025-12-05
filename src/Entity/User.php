@@ -46,6 +46,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\JoinTable(name: 'user_to_role')]
     private Collection $roleEntities;
 
+    #[ORM\ManyToOne(targetEntity: Image::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Image $profile_image = null;
+
     public function __construct()
     {
         $this->id = Uuid::v4();
@@ -193,5 +197,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
+    }
+
+    public function getProfileImage(): ?Image
+    {
+        return $this->profile_image;
+    }
+
+    public function setProfileImage(?Image $profile_image): static
+    {
+        $this->profile_image = $profile_image;
+        return $this;
     }
 }

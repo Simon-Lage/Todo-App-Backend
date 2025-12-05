@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Dev\DataGenerator;
 
-use App\Entity\AppConfig;
+use App\Entity\Image;
+use App\Entity\Permission;
 use App\Entity\Project;
 use App\Entity\Role;
 use App\Entity\Task;
 use App\Entity\User;
-use App\Security\Permission\PermissionRegistry;
+use App\Image\Service\ImageStorage;
+use App\Security\Permission\PermissionEnum;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -17,64 +19,40 @@ final class RandomDataSeeder
 {
     private const ROLE_PROFILES = [
         'admin' => [
-            'perm_can_create_user' => true,
-            'perm_can_edit_user' => true,
-            'perm_can_read_user' => true,
-            'perm_can_delete_user' => true,
-            'perm_can_create_roles' => true,
-            'perm_can_edit_roles' => true,
-            'perm_can_read_roles' => true,
-            'perm_can_delete_roles' => true,
-            'perm_can_create_tasks' => true,
-            'perm_can_edit_tasks' => true,
-            'perm_can_read_all_tasks' => true,
-            'perm_can_delete_tasks' => true,
-            'perm_can_assign_tasks_to_user' => true,
-            'perm_can_assign_tasks_to_project' => true,
-            'perm_can_create_projects' => true,
-            'perm_can_edit_projects' => true,
-            'perm_can_read_projects' => true,
-            'perm_can_delete_projects' => true,
+            PermissionEnum::CAN_CREATE_USER,
+            PermissionEnum::CAN_EDIT_USER,
+            PermissionEnum::CAN_READ_USER,
+            PermissionEnum::CAN_DELETE_USER,
+            PermissionEnum::CAN_CREATE_ROLES,
+            PermissionEnum::CAN_EDIT_ROLES,
+            PermissionEnum::CAN_READ_ROLES,
+            PermissionEnum::CAN_DELETE_ROLES,
+            PermissionEnum::CAN_CREATE_TASKS,
+            PermissionEnum::CAN_EDIT_TASKS,
+            PermissionEnum::CAN_READ_ALL_TASKS,
+            PermissionEnum::CAN_DELETE_TASKS,
+            PermissionEnum::CAN_ASSIGN_TASKS_TO_USER,
+            PermissionEnum::CAN_ASSIGN_TASKS_TO_PROJECT,
+            PermissionEnum::CAN_CREATE_PROJECTS,
+            PermissionEnum::CAN_EDIT_PROJECTS,
+            PermissionEnum::CAN_READ_PROJECTS,
+            PermissionEnum::CAN_DELETE_PROJECTS,
         ],
         'teamlead' => [
-            'perm_can_create_user' => false,
-            'perm_can_edit_user' => false,
-            'perm_can_read_user' => true,
-            'perm_can_delete_user' => false,
-            'perm_can_create_roles' => false,
-            'perm_can_edit_roles' => false,
-            'perm_can_read_roles' => true,
-            'perm_can_delete_roles' => false,
-            'perm_can_create_tasks' => true,
-            'perm_can_edit_tasks' => true,
-            'perm_can_read_all_tasks' => true,
-            'perm_can_delete_tasks' => false,
-            'perm_can_assign_tasks_to_user' => true,
-            'perm_can_assign_tasks_to_project' => true,
-            'perm_can_create_projects' => true,
-            'perm_can_edit_projects' => true,
-            'perm_can_read_projects' => true,
-            'perm_can_delete_projects' => false,
+            PermissionEnum::CAN_READ_USER,
+            PermissionEnum::CAN_READ_ROLES,
+            PermissionEnum::CAN_CREATE_TASKS,
+            PermissionEnum::CAN_EDIT_TASKS,
+            PermissionEnum::CAN_READ_ALL_TASKS,
+            PermissionEnum::CAN_ASSIGN_TASKS_TO_USER,
+            PermissionEnum::CAN_ASSIGN_TASKS_TO_PROJECT,
+            PermissionEnum::CAN_CREATE_PROJECTS,
+            PermissionEnum::CAN_EDIT_PROJECTS,
+            PermissionEnum::CAN_READ_PROJECTS,
         ],
         'staff' => [
-            'perm_can_create_user' => false,
-            'perm_can_edit_user' => false,
-            'perm_can_read_user' => false,
-            'perm_can_delete_user' => false,
-            'perm_can_create_roles' => false,
-            'perm_can_edit_roles' => false,
-            'perm_can_read_roles' => false,
-            'perm_can_delete_roles' => false,
-            'perm_can_create_tasks' => false,
-            'perm_can_edit_tasks' => true,
-            'perm_can_read_all_tasks' => false,
-            'perm_can_delete_tasks' => false,
-            'perm_can_assign_tasks_to_user' => false,
-            'perm_can_assign_tasks_to_project' => false,
-            'perm_can_create_projects' => false,
-            'perm_can_edit_projects' => false,
-            'perm_can_read_projects' => true,
-            'perm_can_delete_projects' => false,
+            PermissionEnum::CAN_EDIT_TASKS,
+            PermissionEnum::CAN_READ_PROJECTS,
         ],
     ];
 
@@ -85,57 +63,64 @@ final class RandomDataSeeder
     ];
 
     private const FIRST_NAMES = [
-        'Alex', 'Sam', 'Jamie', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Dakota', 'Emerson', 'Harper',
-        'Riley', 'Skyler', 'Avery', 'Logan', 'Rowan', 'Phoenix', 'Quinn', 'Peyton', 'Sawyer', 'Reese',
-        'Charlie', 'Emery', 'Finley', 'Hayden', 'Kendall', 'Lennon', 'Parker', 'Sloane', 'Tatum', 'Wren',
+        'Max', 'Lisa', 'Anna', 'Leon', 'Emma', 'Paul', 'Mia', 'Felix', 'Sophie', 'Jonas',
+        'Laura', 'Lukas', 'Hannah', 'Tim', 'Lena', 'Jan', 'Sarah', 'Finn', 'Marie', 'Nico',
+        'Julia', 'Tom', 'Lea', 'Ben', 'Nina', 'Simon', 'Clara', 'David', 'Amelie', 'Moritz',
     ];
 
     private const LAST_NAMES = [
-        'Anderson', 'Bennett', 'Campbell', 'Dawson', 'Ellison', 'Fletcher', 'Grayson', 'Hampton', 'Iverson', 'Jensen',
-        'Kensington', 'Lawson', 'Matthews', 'Nolan', 'Oakley', 'Prescott', 'Ramsey', 'Sterling', 'Thatcher', 'Underwood',
-        'Vaughn', 'Whitaker', 'Xavier', 'Young', 'Zimmer', 'Holden', 'Carter', 'Dalton', 'Everly', 'Foster',
+        'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann',
+        'Koch', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Braun', 'Werner', 'Schwarz', 'Hofmann',
+        'Zimmermann', 'Schmitt', 'Hartmann', 'Lange', 'Schmitz', 'Krüger', 'Meier', 'Lehmann', 'Köhler', 'Herrmann',
     ];
 
     private const PROJECT_PREFIXES = [
-        'Apollo', 'Beacon', 'Cascade', 'Drift', 'Echo', 'Fusion', 'Harbor', 'Impulse', 'Jade', 'Keystone',
-        'Lumen', 'Mosaic', 'Nimbus', 'Orbit', 'Pulse', 'Quantum', 'Radiant', 'Summit', 'Tango', 'Vertex',
-        'Wave', 'Zenith', 'Aurora', 'Catalyst', 'Frontier', 'Horizon', 'Momentum', 'Nova', 'Phoenix', 'Voyager',
+        'Digitale', 'Neue', 'Innovative', 'Moderne', 'Zentrale', 'Erweiterte', 'Optimierte', 'Integrierte', 'Mobile', 'Cloud',
+        'Smart', 'Agile', 'Nachhaltige', 'Zukunfts', 'Kunden', 'Service', 'Mitarbeiter', 'Prozess', 'Daten', 'Qualitäts',
+        'Sicherheits', 'Produktions', 'Marketing', 'Vertriebs', 'HR', 'Finance', 'Support', 'Innovations', 'Strategie', 'Entwicklungs',
     ];
 
     private const PROJECT_SUFFIXES = [
-        'Alpha', 'Bravo', 'Core', 'Drive', 'Edge', 'Flow', 'Gate', 'Hub', 'Insight', 'Launch',
-        'Matrix', 'Nexus', 'Ops', 'Prime', 'Quest', 'Rise', 'Signal', 'Track', 'Unity', 'Vault',
-        'Waypoint', 'Xchange', 'Yield', 'Zen', 'Forge', 'Loop', 'Sphere', 'Shift', 'Glow', 'Spark',
+        'Portal', 'Plattform', 'System', 'Hub', 'Center', 'Tool', 'Suite', 'Manager', 'Dashboard', 'Cockpit',
+        'Framework', 'Lösung', 'Anwendung', 'Interface', 'Modul', 'Engine', 'Service', 'Gateway', 'Workspace', 'Studio',
+        'Zentrum', 'Planer', 'Organizer', 'Assistent', 'Navigator', 'Controller', 'Monitor', 'Analyzer', 'Optimizer', 'Builder',
     ];
 
     private const TASK_TITLES = [
-        'Prepare project brief', 'Draft user stories', 'Refine backlog', 'Implement authentication',
-        'Design database schema', 'Review API contracts', 'Write integration tests', 'Polish UI copy',
-        'Sync with stakeholders', 'Plan deployment pipeline', 'Configure monitoring', 'Document edge cases',
-        'Analyse customer feedback', 'Prioritise bug fixes', 'Set up demo environment', 'Update coding guidelines',
-        'Run exploratory testing', 'Evaluate feature toggle', 'Refactor legacy module', 'Audit access permissions',
-        'Create onboarding checklist', 'Review security posture', 'Optimise database queries', 'Coordinate release notes',
+        'Projektbeschreibung erstellen', 'User Stories ausarbeiten', 'Backlog verfeinern', 'Authentifizierung implementieren',
+        'Datenbankschema entwerfen', 'API-Verträge prüfen', 'Integrationstests schreiben', 'UI-Texte optimieren',
+        'Abstimmung mit Stakeholdern', 'Deployment-Pipeline planen', 'Monitoring konfigurieren', 'Randfälle dokumentieren',
+        'Kundenfeedback analysieren', 'Bugfixes priorisieren', 'Demo-Umgebung einrichten', 'Coding-Richtlinien aktualisieren',
+        'Exploratives Testen durchführen', 'Feature-Toggle evaluieren', 'Legacy-Modul refaktorieren', 'Zugriffsrechte prüfen',
+        'Onboarding-Checkliste erstellen', 'Sicherheitskonzept überprüfen', 'Datenbankabfragen optimieren', 'Release-Notes koordinieren',
     ];
 
     private const TASK_NOTES = [
-        'Focus on keeping the experience lightweight.',
-        'Coordinate with QA to ensure coverage before sign-off.',
-        'Remember to loop in product marketing ahead of launch.',
-        'Check compatibility with the mobile client before closing.',
-        'Path the changes behind a feature flag for safe rollout.',
-        'Gather quick feedback from at least two pilot teams.',
-        'Document any assumptions around third-party integrations.',
-        'Highlight potential blockers for the next sync.',
-        'Pair with another teammate to speed up validation.',
-        'Add findings to the shared knowledge base when done.',
+        'Fokus auf schlanke und performante Lösung legen.',
+        'Abstimmung mit QA vor Freigabe sicherstellen.',
+        'Produktmarketing frühzeitig in den Launch einbinden.',
+        'Kompatibilität mit Mobile-Client vor Abschluss prüfen.',
+        'Änderungen hinter Feature-Flag absichern für sicheres Rollout.',
+        'Schnelles Feedback von mindestens zwei Pilot-Teams einholen.',
+        'Annahmen zu Drittanbieter-Integrationen dokumentieren.',
+        'Potenzielle Blocker für das nächste Meeting hervorheben.',
+        'Pair-Programming nutzen, um Validierung zu beschleunigen.',
+        'Erkenntnisse in die gemeinsame Wissensdatenbank eintragen.',
     ];
 
     private const STATUSES = ['open', 'in_progress', 'review', 'done', 'cancelled'];
     private const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
+    private ?string $facesDirectory = null;
+    private ?string $imagesDirectory = null;
+    private ?array $cachedFaceImages = null;
+    private ?array $cachedGeneralImages = null;
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly ImageStorage $imageStorage,
+        private readonly string $projectDir,
     ) {
     }
 
@@ -151,7 +136,9 @@ final class RandomDataSeeder
                 $this->assertDatabaseEmpty();
             }
 
-            $this->ensureAppConfig();
+            $this->loadAvailableImages();
+
+            $this->ensurePermissions();
             $roles = $this->createRoles();
             $usersByRole = $this->createUsers($roles);
             $projectOutcome = $this->createProjectsAndTasks($usersByRole);
@@ -163,6 +150,7 @@ final class RandomDataSeeder
                 'users' => array_reduce($usersByRole, static fn (int $carry, array $users) => $carry + count($users), 0),
                 'projects' => count($projectOutcome['projects']),
                 'tasks' => $projectOutcome['taskCount'],
+                'images' => $projectOutcome['imageCount'],
             ];
         });
     }
@@ -170,7 +158,7 @@ final class RandomDataSeeder
     private function purgeDatabase(): void
     {
         $connection = $this->entityManager->getConnection();
-        $connection->executeStatement('TRUNCATE TABLE image, logs, password_reset_tokens, task, project, user_to_role, role, "user", app_config RESTART IDENTITY CASCADE');
+        $connection->executeStatement('TRUNCATE TABLE image, logs, password_reset_tokens, task, project, user_to_role, role_permission, permission, role, "user" RESTART IDENTITY CASCADE');
         $this->entityManager->clear();
     }
 
@@ -182,7 +170,6 @@ final class RandomDataSeeder
             'role' => 'SELECT COUNT(*) FROM role',
             'project' => 'SELECT COUNT(*) FROM project',
             'task' => 'SELECT COUNT(*) FROM task',
-            'app_config' => 'SELECT COUNT(*) FROM app_config',
         ];
 
         foreach ($tables as $label => $query) {
@@ -193,15 +180,23 @@ final class RandomDataSeeder
         }
     }
 
-    private function ensureAppConfig(): void
+    private function ensurePermissions(): void
     {
-        $repository = $this->entityManager->getRepository(AppConfig::class);
-        if ($repository->count([]) > 0) {
-            return;
+        $repo = $this->entityManager->getRepository(Permission::class);
+        $existing = [];
+        foreach ($repo->findAll() as $p) {
+            $existing[$p->getName()] = $p;
         }
 
-        $config = new AppConfig(['changeit.test']);
-        $this->entityManager->persist($config);
+        foreach (PermissionEnum::cases() as $enum) {
+            if (!isset($existing[$enum->value])) {
+                $permission = new Permission();
+                $permission->setName($enum->value);
+                $permission->setDescription('Auto-generated permission');
+                $this->entityManager->persist($permission);
+            }
+        }
+        $this->entityManager->flush();
     }
 
     /**
@@ -209,18 +204,21 @@ final class RandomDataSeeder
      */
     private function createRoles(): array
     {
+        $permissionRepo = $this->entityManager->getRepository(Permission::class);
+        $allPermissions = [];
+        foreach ($permissionRepo->findAll() as $p) {
+            $allPermissions[$p->getName()] = $p;
+        }
+
         $catalog = [];
         foreach (self::ROLE_PROFILES as $slug => $permissions) {
             $role = new Role();
             $role->setName($slug);
-            foreach ($permissions as $permission => $value) {
-                $getter = PermissionRegistry::MAP[$permission] ?? null;
-                if ($getter === null) {
-                    continue;
+            
+            foreach ($permissions as $enum) {
+                if (isset($allPermissions[$enum->value])) {
+                    $role->addPermission($allPermissions[$enum->value]);
                 }
-
-                $setter = 'set' . substr($getter, 2);
-                $role->$setter($value);
             }
 
             $catalog[$slug] = $role;
@@ -242,11 +240,24 @@ final class RandomDataSeeder
             for ($i = 0; $i < $count; $i++) {
                 $user = new User();
 
-                $nameToken = $this->generateNameToken($roleSlug, $i);
-                $user->setName($nameToken['display']);
-                $user->setEmail($nameToken['email']);
+                if ($i === 0) {
+                    $fixedUsers = [
+                        'admin' => ['name' => 'Admin Test', 'email' => 'admin@changeit.de'],
+                        'teamlead' => ['name' => 'Teamlead Test', 'email' => 'teamlead@changeit.de'],
+                        'staff' => ['name' => 'Staff Test', 'email' => 'staff@changeit.de'],
+                    ];
+                    $user->setName($fixedUsers[$roleSlug]['name']);
+                    $user->setEmail($fixedUsers[$roleSlug]['email']);
+                    
+                    $password = $this->passwordHasher->hashPassword($user, '123');
+                } else {
+                    $nameToken = $this->generateNameToken($roleSlug, $i);
+                    $user->setName($nameToken['display']);
+                    $user->setEmail($nameToken['email']);
+                    
+                    $password = $this->passwordHasher->hashPassword($user, 'Password123!');
+                }
 
-                $password = $this->passwordHasher->hashPassword($user, 'Password123!');
                 $user->setPassword($password);
                 $user->setIsPasswordTemporary(false);
                 $user->setActive(true);
@@ -261,6 +272,17 @@ final class RandomDataSeeder
 
                 $user->assignRole($roles[$roleSlug]);
 
+                $shouldHaveProfileImage = ($i === 0 && $roleSlug !== 'admin') || random_int(0, 100) < 80;
+                if ($shouldHaveProfileImage) {
+                    $randomFace = $this->getRandomFaceImage();
+                    if ($randomFace !== null) {
+                        $profileImage = $this->createImageFromFile($randomFace, $user, 'profile');
+                        if ($profileImage !== null) {
+                            $user->setProfileImage($profileImage);
+                        }
+                    }
+                }
+
                 $this->entityManager->persist($user);
                 $usersByRole[$roleSlug][] = $user;
             }
@@ -271,12 +293,13 @@ final class RandomDataSeeder
 
     /**
      * @param array<string, User[]> $usersByRole
-     * @return array{projects: Project[], taskCount: int}
+     * @return array{projects: Project[], taskCount: int, imageCount: int}
      */
     private function createProjectsAndTasks(array $usersByRole): array
     {
         $projects = [];
         $taskCount = 0;
+        $imageCount = 0;
 
         $projectTaskAllocations = $this->buildTaskAllocation(count: 100);
 
@@ -286,7 +309,8 @@ final class RandomDataSeeder
             $project->setDescription($this->randomProjectDescription());
 
             $creatorPool = array_merge($usersByRole['admin'], $usersByRole['teamlead']);
-            $project->setCreatedByUser($this->pickRandom($creatorPool));
+            $creator = $this->pickRandom($creatorPool);
+            $project->setCreatedByUser($creator);
 
             $createdAt = $this->randomPastDate(240);
             $project->setCreatedAt($createdAt);
@@ -294,23 +318,32 @@ final class RandomDataSeeder
             $this->entityManager->persist($project);
             $projects[] = $project;
 
-            $taskCount += $this->createTasksForProject($project, $taskTotal, $usersByRole['teamlead'], $usersByRole['staff'], $createdAt);
+            if (random_int(0, 100) < 60) {
+                $imageCount += $this->createImagesForProject($project, $creator);
+            }
+
+            $taskResult = $this->createTasksForProject($project, $taskTotal, $usersByRole['teamlead'], $usersByRole['staff'], $createdAt);
+            $taskCount += $taskResult['taskCount'];
+            $imageCount += $taskResult['imageCount'];
         }
 
-        return ['projects' => $projects, 'taskCount' => $taskCount];
+        return ['projects' => $projects, 'taskCount' => $taskCount, 'imageCount' => $imageCount];
     }
 
     /**
      * @param User[] $creators
      * @param User[] $assignees
+     * @return array{taskCount: int, imageCount: int}
      */
-    private function createTasksForProject(Project $project, int $taskTotal, array $creators, array $assignees, \DateTimeImmutable $projectCreatedAt): int
+    private function createTasksForProject(Project $project, int $taskTotal, array $creators, array $assignees, \DateTimeImmutable $projectCreatedAt): array
     {
         if ($taskTotal === 0) {
-            return 0;
+            return ['taskCount' => 0, 'imageCount' => 0];
         }
 
         $created = 0;
+        $imageCount = 0;
+
         for ($i = 0; $i < $taskTotal; $i++) {
             $task = new Task();
             $task->setProject($project);
@@ -321,10 +354,15 @@ final class RandomDataSeeder
 
             $createdAt = $this->randomTaskCreationDate($projectCreatedAt);
             $task->setCreatedAt($createdAt);
-            $task->setCreatedByUser($this->pickRandom($creators));
+            $creator = $this->pickRandom($creators);
+            $task->setCreatedByUser($creator);
 
             if (random_int(0, 100) < 85) {
-                $task->setAssignedToUser($this->pickRandom($assignees));
+                $assigneeCount = random_int(1, min(3, count($assignees)));
+                $selectedAssignees = (array) array_rand(array_flip(range(0, count($assignees) - 1)), $assigneeCount);
+                foreach ($selectedAssignees as $index) {
+                    $task->assignUser($assignees[$index]);
+                }
             }
 
             if (random_int(0, 100) < 70) {
@@ -337,9 +375,13 @@ final class RandomDataSeeder
 
             $this->entityManager->persist($task);
             $created++;
+
+            if (random_int(0, 100) < 30) {
+                $imageCount += $this->createImagesForTask($task, $creator);
+            }
         }
 
-        return $created;
+        return ['taskCount' => $created, 'imageCount' => $imageCount];
     }
 
     private function buildTaskAllocation(int $count): array
@@ -364,7 +406,7 @@ final class RandomDataSeeder
 
         $emailLocal = strtolower(sprintf('%s.%s.%s%02d', $first, $last, $suffix, $index + 1));
         $emailLocal = preg_replace('/[^a-z0-9\.]+/', '', $emailLocal) ?? 'user';
-        $email = sprintf('%s@changeit.test', $emailLocal);
+        $email = sprintf('%s@changeit.de', $emailLocal);
 
         return [
             'display' => $display,
@@ -382,16 +424,16 @@ final class RandomDataSeeder
     private function randomProjectDescription(): string
     {
         $snippets = [
-            'Focuses on improving operational efficiency across teams.',
-            'Targets a better onboarding experience for new customers.',
-            'Aims to consolidate legacy tooling into a unified workflow.',
-            'Explores automation opportunities to reduce manual effort.',
-            'Prepares the foundation for upcoming mobile app work.',
-            'Builds alignment between design, product, and engineering.',
-            'Delivers insights dashboards requested by leadership.',
-            'Evaluates a new integration required for enterprise clients.',
-            'Hardens core authentication paths for external audits.',
-            'Introduces streamlined collaboration rituals for squads.',
+            'Fokussiert auf die Verbesserung der operativen Effizienz über alle Teams hinweg.',
+            'Zielt auf eine bessere Onboarding-Erfahrung für neue Kunden ab.',
+            'Konsolidiert Legacy-Tools in einen einheitlichen Workflow.',
+            'Erkundet Automatisierungsmöglichkeiten zur Reduzierung manueller Aufwände.',
+            'Schafft die Grundlage für kommende Mobile-App-Entwicklungen.',
+            'Schafft Alignment zwischen Design, Produkt und Engineering.',
+            'Liefert Insights-Dashboards wie von der Geschäftsleitung gefordert.',
+            'Evaluiert eine neue Integration für Enterprise-Kunden.',
+            'Härtet zentrale Authentifizierungspfade für externe Audits.',
+            'Führt optimierte Kollaborationsrituale für Teams ein.',
         ];
 
         return $this->pickRandom($snippets);
@@ -460,5 +502,134 @@ final class RandomDataSeeder
         }
 
         return null;
+    }
+
+    private function loadAvailableImages(): void
+    {
+        $facesDir = $this->projectDir.'/dev-assets/random_faces';
+        $imagesDir = $this->projectDir.'/dev-assets/random_images';
+
+        if (is_dir($facesDir)) {
+            $this->facesDirectory = $facesDir;
+        }
+
+        if (is_dir($imagesDir)) {
+            $this->imagesDirectory = $imagesDir;
+        }
+    }
+
+    private function getRandomFaceImage(): ?string
+    {
+        if ($this->facesDirectory === null) {
+            return null;
+        }
+
+        if ($this->cachedFaceImages === null) {
+            $this->cachedFaceImages = $this->scanImagesRecursive($this->facesDirectory);
+        }
+
+        if (count($this->cachedFaceImages) === 0) {
+            return null;
+        }
+
+        return $this->pickRandom($this->cachedFaceImages);
+    }
+
+    private function getRandomGeneralImage(): ?string
+    {
+        if ($this->imagesDirectory === null) {
+            return null;
+        }
+
+        if ($this->cachedGeneralImages === null) {
+            $this->cachedGeneralImages = $this->scanImagesRecursive($this->imagesDirectory);
+        }
+
+        if (count($this->cachedGeneralImages) === 0) {
+            return null;
+        }
+
+        return $this->pickRandom($this->cachedGeneralImages);
+    }
+
+    private function scanImagesRecursive(string $directory): array
+    {
+        $images = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::LEAVES_ONLY
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $extension = strtolower($file->getExtension());
+                if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+                    $images[] = $file->getPathname();
+                }
+            }
+        }
+
+        return $images;
+    }
+
+    private function createImageFromFile(string $filePath, User $uploader, string $type): ?Image
+    {
+        if (!file_exists($filePath)) {
+            return null;
+        }
+
+        $image = new Image();
+        $image->setType($type);
+        $image->setUploadedByUser($uploader);
+        $image->setUploadedAt($this->randomPastDate(180));
+        $image->setFileSize((int) filesize($filePath));
+
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $image->setFileType($extension);
+
+        $this->entityManager->persist($image);
+        $this->imageStorage->store($image, $filePath);
+
+        return $image;
+    }
+
+    private function createImagesForProject(Project $project, User $uploader): int
+    {
+        $imageCount = random_int(1, 4);
+        $created = 0;
+
+        for ($i = 0; $i < $imageCount; $i++) {
+            $randomImage = $this->getRandomGeneralImage();
+            if ($randomImage === null) {
+                break;
+            }
+            $image = $this->createImageFromFile($randomImage, $uploader, 'project_attachment');
+            if ($image !== null) {
+                $image->setProject($project);
+                $created++;
+            }
+        }
+
+        return $created;
+    }
+
+    private function createImagesForTask(Task $task, User $uploader): int
+    {
+        $imageCount = random_int(1, 3);
+        $created = 0;
+
+        for ($i = 0; $i < $imageCount; $i++) {
+            $randomImage = $this->getRandomGeneralImage();
+            if ($randomImage === null) {
+                break;
+            }
+            $image = $this->createImageFromFile($randomImage, $uploader, 'task_attachment');
+            if ($image !== null) {
+                $image->setTask($task);
+                $created++;
+            }
+        }
+
+        return $created;
     }
 }

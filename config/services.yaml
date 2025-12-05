@@ -28,6 +28,10 @@ services:
         arguments:
             $debug: '%kernel.debug%'
 
+    App\Http\Response\ProblemResponseFactory:
+        arguments:
+            $debug: '%kernel.debug%'
+
     App\Auth\Service\AuthTokenService:
         arguments:
             $accessTokenTtl: '%env(int:JWT_ACCESS_TTL)%'
@@ -52,6 +56,14 @@ services:
             $appVersion: '%app.version%'
 
     App\Search\Service\SearchService: ~
+
+    App\Config\Service\ConfigService:
+        arguments:
+            $allowedEmailDomains: '%app.allowed_email_domains%'
+
+    App\Dev\DataGenerator\RandomDataSeeder:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

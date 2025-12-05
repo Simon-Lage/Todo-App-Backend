@@ -16,8 +16,8 @@ class PasswordResetToken
     #[ORM\Column(type: 'uuid', unique: true)]
     private ?Uuid $id = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[ORM\OneToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: false, unique: true, onDelete: 'CASCADE')]
     private ?User $user = null;
 
     #[ORM\Column(name: 'token_digest', length: 64, unique: true)]

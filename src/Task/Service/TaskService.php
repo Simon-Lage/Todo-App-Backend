@@ -44,8 +44,10 @@ final class TaskService
             $task->setDueDate($this->parseDueDate($request->dueDate, 'due_date'));
         }
 
-        if ($request->assignedToUserId !== null) {
-            $task->setAssignedToUser($this->findUser($request->assignedToUserId));
+        if ($request->assignedUserIds !== null && count($request->assignedUserIds) > 0) {
+            foreach ($request->assignedUserIds as $userId) {
+                $task->assignUser($this->findUser($userId));
+            }
         }
 
         if ($request->projectId !== null) {
@@ -92,19 +94,47 @@ final class TaskService
         return $task;
     }
 
-    public function assignToUser(Task $task, string $userId): Task
+    /**
+     * @param string[] $userIds
+     */
+    public function assignUsers(Task $task, array $userIds): Task
     {
-        $user = $this->findUser($userId);
-        $task->setAssignedToUser($user);
+        $task->clearAssignedUsers();
+        
+        foreach ($userIds as $userId) {
+            $user = $this->findUser($userId);
+            $task->assignUser($user);
+        }
+        
         $task->setUpdatedAt(new DateTimeImmutable());
         $this->entityManager->flush();
 
         return $task;
     }
 
-    public function unassign(Task $task): Task
+    public function assignUser(Task $task, string $userId): Task
     {
-        $task->setAssignedToUser(null);
+        $user = $this->findUser($userId);
+        $task->assignUser($user);
+        $task->setUpdatedAt(new DateTimeImmutable());
+        $this->entityManager->flush();
+
+        return $task;
+    }
+
+    public function unassignUser(Task $task, string $userId): Task
+    {
+        $user = $this->findUser($userId);
+        $task->unassignUser($user);
+        $task->setUpdatedAt(new DateTimeImmutable());
+        $this->entityManager->flush();
+
+        return $task;
+    }
+
+    public function clearAssignees(Task $task): Task
+    {
+        $task->clearAssignedUsers();
         $task->setUpdatedAt(new DateTimeImmutable());
         $this->entityManager->flush();
 

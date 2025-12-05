@@ -376,7 +376,7 @@ final class SearchController extends AbstractController
                 continue;
             }
 
-            if ($userId !== null && ($task->getCreatedByUser()?->getId()?->equals($userId) || $task->getAssignedToUser()?->getId()?->equals($userId))) {
+            if ($userId !== null && ($task->getCreatedByUser()?->getId()?->equals($userId) || $task->isAssignedToUser($user))) {
                 $filtered[] = $task;
                 continue;
             }

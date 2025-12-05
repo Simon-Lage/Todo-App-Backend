@@ -35,9 +35,9 @@ class Task
     #[ORM\JoinColumn(nullable: false)]
     private ?User $created_by_user = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?User $assigned_to_user = null;
+    #[ORM\ManyToMany(targetEntity: User::class)]
+    #[ORM\JoinTable(name: 'task_assignees')]
+    private Collection $assignedUsers;
 
     #[ORM\ManyToOne(targetEntity: Project::class, inversedBy: 'tasks')]
     #[ORM\JoinColumn(nullable: true)]
@@ -57,6 +57,7 @@ class Task
         $this->id = Uuid::v4();
         $this->created_at = new \DateTimeImmutable();
         $this->images = new ArrayCollection();
+        $this->assignedUsers = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -130,15 +131,37 @@ class Task
         return $this;
     }
 
-    public function getAssignedToUser(): ?User
+    /**
+     * @return Collection<int, User>
+     */
+    public function getAssignedUsers(): Collection
     {
-        return $this->assigned_to_user;
+        return $this->assignedUsers;
     }
 
-    public function setAssignedToUser(?User $assigned_to_user): static
+    public function assignUser(User $user): static
     {
-        $this->assigned_to_user = $assigned_to_user;
+        if (!$this->assignedUsers->contains($user)) {
+            $this->assignedUsers->add($user);
+        }
         return $this;
+    }
+
+    public function unassignUser(User $user): static
+    {
+        $this->assignedUsers->removeElement($user);
+        return $this;
+    }
+
+    public function clearAssignedUsers(): static
+    {
+        $this->assignedUsers->clear();
+        return $this;
+    }
+
+    public function isAssignedToUser(User $user): bool
+    {
+        return $this->assignedUsers->contains($user);
     }
 
     public function getProject(): ?Project

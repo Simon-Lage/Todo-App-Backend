@@ -19,11 +19,10 @@ final class Version20250925180430 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('DROP SEQUENCE refresh_tokens_id_seq CASCADE');
-        $this->addSql('DROP TABLE refresh_tokens');
-        $this->addSql('ALTER INDEX uniq_password_reset_token_digest RENAME TO UNIQ_3967A216C6A0FB0');
-        $this->addSql('ALTER INDEX idx_password_reset_token_user RENAME TO IDX_3967A216A76ED395');
+        $this->addSql('DROP SEQUENCE IF EXISTS refresh_tokens_id_seq CASCADE');
+        $this->addSql('DROP TABLE IF EXISTS refresh_tokens');
+        $this->addSql('ALTER INDEX IF EXISTS uniq_password_reset_token_digest RENAME TO UNIQ_3967A216C6A0FB0');
+        $this->addSql('ALTER INDEX IF EXISTS idx_password_reset_token_user RENAME TO IDX_3967A216A76ED395');
     }
 
     public function down(Schema $schema): void

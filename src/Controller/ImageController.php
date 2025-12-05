@@ -267,7 +267,7 @@ final class ImageController extends AbstractController
             if ($task->getCreatedByUser()?->getId()?->equals($userId)) {
                 return true;
             }
-            if ($task->getAssignedToUser()?->getId()?->equals($userId)) {
+            if ($task->isAssignedToUser($actor)) {
                 return true;
             }
         }

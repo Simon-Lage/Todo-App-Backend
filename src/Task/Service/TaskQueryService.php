@@ -29,7 +29,8 @@ final class TaskQueryService
         $qb = $this->taskRepository->createQueryBuilder('t');
 
         if ($restrictToUserScope) {
-            $qb->andWhere('t.created_by_user = :current OR t.assigned_to_user = :current')
+            $qb->leftJoin('t.assignedUsers', 'au');
+            $qb->andWhere('t.created_by_user = :current OR au = :current')
                 ->setParameter('current', $currentUser);
         }
 
@@ -46,7 +47,12 @@ final class TaskQueryService
         }
 
         if ($filters['assigned_to_user_id'] !== null) {
-            $qb->andWhere('IDENTITY(t.assigned_to_user) = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
+            if (!isset($qb->getDQLPart('join')['t']) || !array_key_exists('au', $qb->getDQLPart('join')['t'])) {
+                $qb->leftJoin('t.assignedUsers', 'au_filter');
+                $qb->andWhere('au_filter.id = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
+            } else {
+                $qb->andWhere('au.id = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
+            }
         }
 
         if ($filters['created_by_user_id'] !== null) {

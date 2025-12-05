@@ -23,8 +23,9 @@ final class CreateTaskRequest implements JsonRequestDto
         public readonly string $priority,
         #[Assert\DateTime]
         public readonly ?string $dueDate,
-        public readonly ?string $assignedToUserId,
-        public readonly ?string $projectId
+        public readonly ?array $assignedUserIds,
+        public readonly ?string $projectId,
+        public readonly bool $clearDueDate = false
     ) {
     }
 
@@ -44,8 +45,15 @@ final class CreateTaskRequest implements JsonRequestDto
 
         $description = array_key_exists('description', $payload) ? (string) $payload['description'] : null;
         $dueDate = array_key_exists('due_date', $payload) ? ($payload['due_date'] === null ? null : (string) $payload['due_date']) : null;
-        $assigned = array_key_exists('assigned_to_user_id', $payload) ? ($payload['assigned_to_user_id'] === null ? null : (string) $payload['assigned_to_user_id']) : null;
+        $clearDueDate = array_key_exists('clear_due_date', $payload) && $payload['clear_due_date'] === true;
         $project = array_key_exists('project_id', $payload) ? ($payload['project_id'] === null ? null : (string) $payload['project_id']) : null;
+
+        $assignedUserIds = null;
+        if (array_key_exists('assigned_user_ids', $payload) && is_array($payload['assigned_user_ids'])) {
+            $assignedUserIds = array_map('strval', $payload['assigned_user_ids']);
+        } elseif (array_key_exists('assigned_to_user_id', $payload) && $payload['assigned_to_user_id'] !== null) {
+            $assignedUserIds = [(string) $payload['assigned_to_user_id']];
+        }
 
         return new self(
             (string) $payload['title'],
@@ -53,8 +61,9 @@ final class CreateTaskRequest implements JsonRequestDto
             (string) $payload['status'],
             (string) $payload['priority'],
             $dueDate,
-            $assigned,
-            $project
+            $assignedUserIds,
+            $project,
+            $clearDueDate
         );
     }
 }

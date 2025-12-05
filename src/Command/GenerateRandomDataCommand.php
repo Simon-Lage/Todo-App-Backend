@@ -47,11 +47,13 @@ final class GenerateRandomDataCommand extends Command
             'Users',
             'Projects',
             'Tasks',
+            'Images',
         ], [[
             $result['roles'],
             $result['users'],
             $result['projects'],
             $result['tasks'],
+            $result['images'],
         ]]);
 
         if (!$purge) {

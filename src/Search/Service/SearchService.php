@@ -78,7 +78,8 @@ final class SearchService
         }
 
         if (!empty($filters['assigned_to_user_id'])) {
-            $qb->andWhere('IDENTITY(t.assigned_to_user) = :assignedId')->setParameter('assignedId', $filters['assigned_to_user_id']);
+            $qb->leftJoin('t.assignedUsers', 'au_search');
+            $qb->andWhere('au_search.id = :assignedId')->setParameter('assignedId', $filters['assigned_to_user_id']);
         }
 
         if (!empty($filters['created_by_user_id'])) {

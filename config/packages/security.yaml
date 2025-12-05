@@ -18,6 +18,13 @@ security:
             pattern: ^/api/auth/refresh
             stateless: true
             security: false
+        api_register:
+            pattern: ^/api/auth/register
+            stateless: true
+            security: false
+        api_logout:
+            pattern: ^/api/auth/logout
+            stateless: true
         main:
             pattern: ^/api
             stateless: true
@@ -27,6 +34,7 @@ security:
     access_control:
         - { path: ^/api/auth/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/refresh$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/register$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/reset-password/confirm$, roles: PUBLIC_ACCESS }
         - { path: ^/api/info, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }

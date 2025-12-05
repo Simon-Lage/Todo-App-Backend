@@ -19,6 +19,7 @@ final class UserViewFactory
             'created_at' => $user->getCreatedAt()?->format(DATE_ATOM),
             'temporary_password_created_at' => $user->getTemporaryPasswordCreatedAt()?->format(DATE_ATOM),
             'last_login_at' => $user->getLastLoginAt()?->format(DATE_ATOM),
+            'profile_image_id' => $user->getProfileImage()?->getId()?->toRfc4122(),
         ];
     }
 }

@@ -24,7 +24,8 @@ class LogRepository extends ServiceEntityRepository
 
     public function getApproxSizeBytes(): int
     {
-        $detailsSize = (int) $this->_em->createQuery('SELECT COALESCE(SUM(LENGTH(l.details)), 0) FROM App\\Entity\\Log l')
+        $entityManager = $this->getEntityManager();
+        $detailsSize = (int) $entityManager->createQuery('SELECT COALESCE(SUM(LENGTH(l.details)), 0) FROM App\\Entity\\Log l')
             ->getSingleScalarResult();
         $count = $this->countAll();
 
@@ -46,14 +47,14 @@ class LogRepository extends ServiceEntityRepository
 
         $ids = array_map(static fn(array $row) => $row['id'], $ids);
 
-        return $this->_em->createQuery('DELETE FROM App\\Entity\\Log l WHERE l.id IN (:ids)')
+        return $this->getEntityManager()->createQuery('DELETE FROM App\\Entity\\Log l WHERE l.id IN (:ids)')
             ->setParameter('ids', $ids)
             ->execute();
     }
 
     public function findOldestTimestamp(): ?\DateTimeImmutable
     {
-        $result = $this->_em->createQuery('SELECT l.performed_at AS performed_at FROM App\\Entity\\Log l ORDER BY l.performed_at ASC')
+        $result = $this->getEntityManager()->createQuery('SELECT l.performed_at AS performed_at FROM App\\Entity\\Log l ORDER BY l.performed_at ASC')
             ->setMaxResults(1)
             ->getOneOrNullResult();
 
@@ -66,7 +67,7 @@ class LogRepository extends ServiceEntityRepository
 
     public function findLatestTimestamp(): ?\DateTimeImmutable
     {
-        $result = $this->_em->createQuery('SELECT l.performed_at AS performed_at FROM App\\Entity\\Log l ORDER BY l.performed_at DESC')
+        $result = $this->getEntityManager()->createQuery('SELECT l.performed_at AS performed_at FROM App\\Entity\\Log l ORDER BY l.performed_at DESC')
             ->setMaxResults(1)
             ->getOneOrNullResult();
 

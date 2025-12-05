@@ -7,51 +7,24 @@ namespace App\Security\Permission;
 use App\Entity\Role;
 use App\Entity\User;
 
-final class PermissionRegistry
+class PermissionRegistry
 {
-    public const MAP = [
-        'perm_can_create_user' => 'isPermCanCrateUser',
-        'perm_can_edit_user' => 'isPermCanEditUser',
-        'perm_can_read_user' => 'isPermCanReadUser',
-        'perm_can_delete_user' => 'isPermCanDeleteUser',
-        'perm_can_create_roles' => 'isPermCanCreateRoles',
-        'perm_can_edit_roles' => 'isPermCanEditRoles',
-        'perm_can_read_roles' => 'isPermCanReadRoles',
-        'perm_can_delete_roles' => 'isPermCanDeleteRoles',
-        'perm_can_create_tasks' => 'isPermCanCreateTasks',
-        'perm_can_edit_tasks' => 'isPermCanEditTasks',
-        'perm_can_read_all_tasks' => 'isPermCanReadAllTasks',
-        'perm_can_delete_tasks' => 'isPermCanDeleteTasks',
-        'perm_can_assign_tasks_to_user' => 'isPermCanAssignTasksToUser',
-        'perm_can_assign_tasks_to_project' => 'isPermCanAssignTasksToProject',
-        'perm_can_create_projects' => 'isPermCanCreateProjects',
-        'perm_can_edit_projects' => 'isPermCanEditProjects',
-        'perm_can_read_projects' => 'isPermCanReadProjects',
-        'perm_can_delete_projects' => 'isPermCanDeleteProjects',
-    ];
-
     public function catalog(): array
     {
-        return array_keys(self::MAP);
+        return array_map(fn (PermissionEnum $enum) => $enum->value, PermissionEnum::cases());
     }
 
     public function resolve(User $user): array
     {
-        $resolved = array_fill_keys($this->catalog(), false);
+        $resolved = [];
 
         foreach ($user->getRoleEntities() as $role) {
             if (!$role instanceof Role) {
                 continue;
             }
 
-            foreach (self::MAP as $key => $method) {
-                if ($resolved[$key]) {
-                    continue;
-                }
-
-                if ($role->$method()) {
-                    $resolved[$key] = true;
-                }
+            foreach ($role->getPermissions() as $permission) {
+                $resolved[$permission->getName()] = true;
             }
         }
 
@@ -62,10 +35,6 @@ final class PermissionRegistry
     {
         $resolved = $this->resolve($user);
 
-        if (!array_key_exists($permission, $resolved)) {
-            throw new \InvalidArgumentException(sprintf('Unknown permission "%s".', $permission));
-        }
-
-        return $resolved[$permission];
+        return $resolved[$permission] ?? false;
     }
 }

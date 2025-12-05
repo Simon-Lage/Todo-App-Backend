@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Entity\Project;
 use App\Entity\Task;
 use App\Entity\User;
 use App\Exception\ApiProblemException;
 use App\Http\Response\ApiResponseFactory;
 use App\Log\Service\AuditLogger;
 use App\Repository\TaskRepository;
+use App\Security\Permission\PermissionEnum;
 use App\Security\Permission\PermissionRegistry;
+use App\Security\Voter\TaskVoter;
 use App\Task\Dto\AssignUserRequest;
+use App\Task\Dto\AssignUsersRequest;
 use App\Task\Dto\CreateTaskRequest;
 use App\Task\Dto\MoveTaskRequest;
+use App\Task\Dto\UnassignUserRequest;
 use App\Task\Dto\UpdateTaskRequest;
 use App\Task\Dto\UpdateTaskStatusRequest;
 use App\Task\Service\TaskQueryService;
@@ -46,26 +49,12 @@ final class TaskController extends AbstractController
     ) {
     }
 
-    #[Route('/{id}', name: 'api_task_show', methods: ['GET'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
-    public function show(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
-    {
-        $user = $this->requireUser($currentUser);
-        $task = $this->findTask($id);
-
-        if (!$this->canViewTask($task, $user)) {
-            throw ApiProblemException::forbidden('You are not allowed to view this task.');
-        }
-
-        return $this->responseFactory->single($this->taskViewFactory->make($task));
-    }
-
     #[Route('/list', name: 'api_task_list', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function list(Request $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $user = $this->requireUser($currentUser);
-        $restrictScope = !$this->hasPermission($user, 'perm_can_read_all_tasks');
+        $restrictScope = !$this->permissionRegistry->has($user, PermissionEnum::CAN_READ_ALL_TASKS->value);
 
         [$offset, $limit, $sortBy, $direction] = $this->resolvePagination($request, ['created_at', 'due_date', 'priority', 'status', 'title']);
 
@@ -87,19 +76,36 @@ final class TaskController extends AbstractController
         return $this->responseFactory->collection($items, $result['total'], $offset, $limit, $sortBy, strtoupper($direction));
     }
 
+    #[Route('/{id}', name: 'api_task_show', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function show(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $this->requireUser($currentUser);
+        $task = $this->findTask($id);
+
+        $this->denyAccessUnlessGranted(TaskVoter::VIEW, $task);
+
+        return $this->responseFactory->single($this->taskViewFactory->make($task));
+    }
+
     #[Route('', name: 'api_task_create', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_create_tasks')]
+    #[IsGranted(TaskVoter::CREATE)]
     public function create(CreateTaskRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $user = $this->requireUser($currentUser);
         $task = $this->taskService->create($user, $request);
+
+        $assignedUserIds = [];
+        foreach ($task->getAssignedUsers() as $assignedUser) {
+            $assignedUserIds[] = $assignedUser->getId()?->toRfc4122();
+        }
 
         $this->auditLogger->record('task.create', $user, [
             'task_id' => $task->getId()?->toRfc4122(),
             'status' => $task->getStatus(),
             'priority' => $task->getPriority(),
             'project_id' => $task->getProject()?->getId()?->toRfc4122(),
-            'assigned_to_user_id' => $task->getAssignedToUser()?->getId()?->toRfc4122(),
+            'assigned_user_ids' => $assignedUserIds,
         ]);
 
         return $this->responseFactory->single(
@@ -110,28 +116,39 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}', name: 'api_task_update', methods: ['PATCH'])]
-    #[IsGranted('perm:perm_can_edit_tasks')]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function update(string $id, UpdateTaskRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $task = $this->findTask($id);
+        
+        $this->denyAccessUnlessGranted(TaskVoter::EDIT, $task);
+        
         $updated = $this->taskService->update($task, $request);
+
+        $assignedUserIds = [];
+        foreach ($updated->getAssignedUsers() as $assignedUser) {
+            $assignedUserIds[] = $assignedUser->getId()?->toRfc4122();
+        }
 
         $this->auditLogger->record('task.update', $actor, [
             'task_id' => $task->getId()?->toRfc4122(),
             'project_id' => $updated->getProject()?->getId()?->toRfc4122(),
-            'assigned_to_user_id' => $updated->getAssignedToUser()?->getId()?->toRfc4122(),
+            'assigned_user_ids' => $assignedUserIds,
         ]);
 
         return $this->responseFactory->single($this->taskViewFactory->make($updated));
     }
 
     #[Route('/{id}', name: 'api_task_delete', methods: ['DELETE'])]
-    #[IsGranted('perm:perm_can_delete_tasks')]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function delete(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $task = $this->findTask($id);
+        
+        $this->denyAccessUnlessGranted(TaskVoter::DELETE, $task);
+        
         $taskId = $task->getId()?->toRfc4122();
         $projectId = $task->getProject()?->getId()?->toRfc4122();
         $this->taskService->delete($task);
@@ -144,43 +161,92 @@ final class TaskController extends AbstractController
         return $this->responseFactory->single(['message' => 'Task deleted.']);
     }
 
+    #[Route('/{id}/assign-users', name: 'api_task_assign_users', methods: ['POST'])]
+    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
+    public function assignUsers(string $id, AssignUsersRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $actor = $this->requireUser($currentUser);
+        $task = $this->findTask($id);
+        
+        $previousAssignees = [];
+        foreach ($task->getAssignedUsers() as $user) {
+            $previousAssignees[] = $user->getId()?->toRfc4122();
+        }
+        
+        $updated = $this->taskService->assignUsers($task, $request->userIds);
+
+        $newAssignees = [];
+        foreach ($updated->getAssignedUsers() as $user) {
+            $newAssignees[] = $user->getId()?->toRfc4122();
+        }
+
+        $this->auditLogger->record('task.assign_users', $actor, [
+            'task_id' => $task->getId()?->toRfc4122(),
+            'assigned_user_ids' => $newAssignees,
+            'previous_assigned_user_ids' => $previousAssignees,
+        ]);
+
+        return $this->responseFactory->single($this->taskViewFactory->make($updated));
+    }
+
     #[Route('/{id}/assign-user', name: 'api_task_assign_user', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_assign_tasks_to_user')]
+    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
     public function assignUser(string $id, AssignUserRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $task = $this->findTask($id);
-        $previousAssignee = $task->getAssignedToUser()?->getId()?->toRfc4122();
-        $updated = $this->taskService->assignToUser($task, $request->userId);
+        
+        $updated = $this->taskService->assignUser($task, $request->userId);
 
         $this->auditLogger->record('task.assign_user', $actor, [
             'task_id' => $task->getId()?->toRfc4122(),
-            'assigned_to_user_id' => $updated->getAssignedToUser()?->getId()?->toRfc4122(),
-            'previous_assigned_to_user_id' => $previousAssignee,
+            'added_user_id' => $request->userId,
         ]);
 
         return $this->responseFactory->single($this->taskViewFactory->make($updated));
     }
 
     #[Route('/{id}/unassign-user', name: 'api_task_unassign_user', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_assign_tasks_to_user')]
-    public function unassignUser(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
+    public function unassignUser(string $id, UnassignUserRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $task = $this->findTask($id);
-        $previousAssignee = $task->getAssignedToUser()?->getId()?->toRfc4122();
-        $updated = $this->taskService->unassign($task);
+        
+        $updated = $this->taskService->unassignUser($task, $request->userId);
 
         $this->auditLogger->record('task.unassign_user', $actor, [
             'task_id' => $task->getId()?->toRfc4122(),
-            'previous_assigned_to_user_id' => $previousAssignee,
+            'removed_user_id' => $request->userId,
+        ]);
+
+        return $this->responseFactory->single($this->taskViewFactory->make($updated));
+    }
+
+    #[Route('/{id}/clear-assignees', name: 'api_task_clear_assignees', methods: ['POST'])]
+    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
+    public function clearAssignees(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $actor = $this->requireUser($currentUser);
+        $task = $this->findTask($id);
+        
+        $previousAssignees = [];
+        foreach ($task->getAssignedUsers() as $user) {
+            $previousAssignees[] = $user->getId()?->toRfc4122();
+        }
+        
+        $updated = $this->taskService->clearAssignees($task);
+
+        $this->auditLogger->record('task.clear_assignees', $actor, [
+            'task_id' => $task->getId()?->toRfc4122(),
+            'previous_assigned_user_ids' => $previousAssignees,
         ]);
 
         return $this->responseFactory->single($this->taskViewFactory->make($updated));
     }
 
     #[Route('/{id}/move-to-project', name: 'api_task_move_to_project', methods: ['POST'])]
-    #[IsGranted('perm:perm_can_assign_tasks_to_project')]
+    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_PROJECT->value)]
     public function moveToProject(string $id, MoveTaskRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
@@ -204,9 +270,7 @@ final class TaskController extends AbstractController
         $user = $this->requireUser($currentUser);
         $task = $this->findTask($id);
 
-        if (!$this->canChangeStatus($task, $user)) {
-            throw ApiProblemException::forbidden('You are not allowed to change the status of this task.');
-        }
+        $this->denyAccessUnlessGranted(TaskVoter::STATUS, $task);
 
         $previousStatus = $task->getStatus();
         $updated = $this->taskService->changeStatus($task, $request->status);
@@ -218,47 +282,6 @@ final class TaskController extends AbstractController
         ]);
 
         return $this->responseFactory->single($this->taskViewFactory->make($updated));
-    }
-
-    private function canViewTask(Task $task, User $user): bool
-    {
-        $userId = $user->getId();
-        if ($userId !== null && $task->getCreatedByUser()?->getId()?->equals($userId)) {
-            return true;
-        }
-
-        if ($userId !== null && $task->getAssignedToUser()?->getId()?->equals($userId)) {
-            return true;
-        }
-
-        if ($this->hasPermission($user, 'perm_can_read_all_tasks')) {
-            return true;
-        }
-
-        $project = $task->getProject();
-        if ($project instanceof Project) {
-            $projectOwnerId = $project->getCreatedByUser()?->getId();
-            if ($projectOwnerId !== null && $userId !== null && $projectOwnerId->equals($userId)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function canChangeStatus(Task $task, User $user): bool
-    {
-        if ($this->hasPermission($user, 'perm_can_edit_tasks')) {
-            return true;
-        }
-
-        $userId = $user->getId();
-
-        if ($userId !== null && $task->getAssignedToUser()?->getId()?->equals($userId)) {
-            return true;
-        }
-
-        return $userId !== null && $task->getCreatedByUser()?->getId()?->equals($userId);
     }
 
     private function resolvePagination(Request $request, array $allowedSorts): array
@@ -329,13 +352,6 @@ final class TaskController extends AbstractController
         }
 
         return $user;
-    }
-
-    private function hasPermission(User $user, string $permission): bool
-    {
-        $resolved = $this->permissionRegistry->resolve($user);
-
-        return $resolved[$permission] ?? false;
     }
 
     private function toUuid(string $value, string $field): Uuid

@@ -1,0 +1,4 @@
+parameters:
+    app.allowed_email_domains:
+        - 'changeit.de'
+        - 'changeit.test'

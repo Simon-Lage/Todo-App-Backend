@@ -4,18 +4,24 @@ declare(strict_types=1);
 
 namespace App\Role\Service;
 
+use App\Entity\Permission;
 use App\Entity\Role;
 use App\Entity\User;
 use App\Exception\ApiProblemException;
+use App\Repository\PermissionRepository;
 use App\Repository\UserRepository;
-use App\Security\Permission\PermissionRegistry;
+use App\Security\Permission\PermissionEnum;
 use App\User\Service\UserService;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class RoleService
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly UserRepository $userRepository, private readonly UserService $userService)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly UserRepository $userRepository,
+        private readonly UserService $userService,
+        private readonly PermissionRepository $permissionRepository
+    ) {
     }
 
     public function create(string $name, array $permissions): Role
@@ -39,6 +45,7 @@ final class RoleService
         foreach ($permissions as $permission => $value) {
             $current[$permission] = (bool) $value;
         }
+        
         $this->applyPermissions($role, $current);
         $this->entityManager->flush();
 
@@ -63,17 +70,43 @@ final class RoleService
 
     private function applyPermissions(Role $role, array $permissions): void
     {
-        foreach (PermissionRegistry::MAP as $key => $getter) {
-            $setter = 'set'.substr($getter, 2);
-            $role->$setter($permissions[$key] ?? false);
+        $allPermissionEntities = $this->permissionRepository->findAll();
+        $permissionMap = [];
+        foreach ($allPermissionEntities as $p) {
+            $permissionMap[$p->getName()] = $p;
+        }
+
+        foreach (PermissionEnum::cases() as $enum) {
+            $key = $enum->value;
+            $shouldHave = $permissions[$key] ?? false;
+
+            $entity = $permissionMap[$key] ?? null;
+            
+            if (!$entity) {
+                $entity = new Permission();
+                $entity->setName($key);
+                $this->entityManager->persist($entity);
+                $permissionMap[$key] = $entity;
+            }
+
+            if ($shouldHave) {
+                $role->addPermission($entity);
+            } else {
+                $role->removePermission($entity);
+            }
         }
     }
 
     private function extractPermissions(Role $role): array
     {
         $values = [];
-        foreach (PermissionRegistry::MAP as $key => $getter) {
-            $values[$key] = (bool) $role->$getter();
+        $rolePermissions = [];
+        foreach ($role->getPermissions() as $p) {
+            $rolePermissions[$p->getName()] = true;
+        }
+
+        foreach (PermissionEnum::cases() as $enum) {
+            $values[$enum->value] = isset($rolePermissions[$enum->value]);
         }
 
         return $values;

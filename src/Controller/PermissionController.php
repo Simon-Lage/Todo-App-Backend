@@ -8,6 +8,7 @@ use App\Entity\Role;
 use App\Entity\User;
 use App\Exception\ApiProblemException;
 use App\Http\Response\ApiResponseFactory;
+use App\Security\Permission\PermissionEnum;
 use App\Security\Permission\PermissionRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,7 +25,7 @@ final class PermissionController extends AbstractController
     }
 
     #[Route('/catalog', name: 'api_permission_catalog', methods: ['GET'])]
-    #[IsGranted('perm:perm_can_edit_user')]
+    #[IsGranted('perm:'.PermissionEnum::CAN_EDIT_USER->value)]
     public function catalog(#[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         if (!$currentUser instanceof User) {

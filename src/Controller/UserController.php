@@ -273,7 +273,8 @@ final class UserController extends AbstractController
         [$offset, $limit, $sortBy, $direction] = $this->resolvePagination($request, ['created_at', 'due_date', 'priority', 'status']);
 
         $qb = $this->taskRepository->createQueryBuilder('t')
-            ->andWhere('t.created_by_user = :user OR t.assigned_to_user = :user')
+            ->leftJoin('t.assignedUsers', 'au')
+            ->andWhere('t.created_by_user = :user OR au = :user')
             ->setParameter('user', $user);
 
         if ($request->query->get('status') !== null) {

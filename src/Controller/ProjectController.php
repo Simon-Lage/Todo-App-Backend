@@ -48,20 +48,6 @@ final class ProjectController extends AbstractController
     ) {
     }
 
-    #[Route('/{id}', name: 'api_project_show', methods: ['GET'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
-    public function show(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
-    {
-        $user = $this->requireUser($currentUser);
-        $project = $this->findProject($id);
-
-        if (!$this->isProjectOwner($project, $user) && !$this->hasPermission($user, 'perm_can_read_projects')) {
-            throw ApiProblemException::forbidden('Insufficient permissions to read this project.');
-        }
-
-        return $this->responseFactory->single($this->projectViewFactory->make($project));
-    }
-
     #[Route('/list', name: 'api_project_list', methods: ['GET'])]
     #[IsGranted('perm:perm_can_read_projects')]
     public function list(Request $request): JsonResponse
@@ -78,6 +64,20 @@ final class ProjectController extends AbstractController
         $items = array_map(fn(Project $project) => $this->projectSummaryViewFactory->make($project), $result['items']);
 
         return $this->responseFactory->collection($items, $result['total'], $offset, $limit, $sortBy, strtoupper($direction));
+    }
+
+    #[Route('/{id}', name: 'api_project_show', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function show(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $user = $this->requireUser($currentUser);
+        $project = $this->findProject($id);
+
+        if (!$this->isProjectOwner($project, $user) && !$this->hasPermission($user, 'perm_can_read_projects')) {
+            throw ApiProblemException::forbidden('Insufficient permissions to read this project.');
+        }
+
+        return $this->responseFactory->single($this->projectViewFactory->make($project));
     }
 
     #[Route('', name: 'api_project_create', methods: ['POST'])]

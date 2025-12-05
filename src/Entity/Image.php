@@ -34,10 +34,6 @@ class Image
     #[ORM\JoinColumn(nullable: true)]
     private ?Task $task = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?User $user = null;
-
     #[ORM\Column(length: 50)]
     private ?string $type = null;
 
@@ -115,17 +111,6 @@ class Image
     public function setTask(?Task $task): static
     {
         $this->task = $task;
-        return $this;
-    }
-
-    public function getUser(): ?User
-    {
-        return $this->user;
-    }
-
-    public function setUser(?User $user): static
-    {
-        $this->user = $user;
         return $this;
     }
 
