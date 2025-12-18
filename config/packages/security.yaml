@@ -22,6 +22,10 @@ security:
             pattern: ^/api/auth/register
             stateless: true
             security: false
+        api_password_reset:
+            pattern: ^/api/user/(find-id-by-email|verify-email-for-password-reset)
+            stateless: true
+            security: false
         api_logout:
             pattern: ^/api/auth/logout
             stateless: true
@@ -36,6 +40,8 @@ security:
         - { path: ^/api/auth/refresh$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/reset-password/confirm$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/user/find-id-by-email$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/user/verify-email-for-password-reset, roles: PUBLIC_ACCESS }
         - { path: ^/api/info, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc\.json$, roles: PUBLIC_ACCESS }

@@ -52,11 +52,12 @@ final class RoleController extends AbstractController
         }
         $limit = min($limit, 200);
 
-        $qb = $this->roleRepository->createQueryBuilder('r')
-            ->orderBy('r.id', 'ASC');
+	        $qb = $this->roleRepository->createQueryBuilder('r')
+	            ->orderBy('r.id', 'ASC');
 
-        $countQb = clone $qb;
-        $total = (int) $countQb->select('COUNT(r.id)')->getQuery()->getSingleScalarResult();
+	        $countQb = clone $qb;
+	        $countQb->resetDQLPart('orderBy');
+	        $total = (int) $countQb->select('COUNT(r.id)')->getQuery()->getSingleScalarResult();
 
         $roles = $qb
             ->setFirstResult($offset)
@@ -155,6 +156,7 @@ final class RoleController extends AbstractController
     {
         $actor = $this->requireUser($currentUser);
         $user = $this->findUser($userId);
+        $this->denyIfProtectedAdminAccount($actor, $user);
         $updated = $this->roleService->assignRolesToUser($user, $request->roles);
 
         $this->auditLogger->record('role.assign', $actor, [
@@ -219,5 +221,31 @@ final class RoleController extends AbstractController
         }
 
         return $user;
+    }
+
+    private function denyIfProtectedAdminAccount(User $actor, User $target): void
+    {
+        if (!$this->isAdminAccount($target)) {
+            return;
+        }
+
+        $actorId = $actor->getId();
+        $targetId = $target->getId();
+        if ($actorId !== null && $targetId !== null && $actorId->equals($targetId)) {
+            return;
+        }
+
+        throw ApiProblemException::forbidden('Admin accounts can only be modified by the account owner.');
+    }
+
+    private function isAdminAccount(User $user): bool
+    {
+        foreach ($user->getRoleEntities() as $role) {
+            if ($role instanceof Role && strtolower((string) $role->getName()) === 'admin') {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

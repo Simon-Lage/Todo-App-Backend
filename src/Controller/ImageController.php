@@ -240,18 +240,28 @@ final class ImageController extends AbstractController
 
     private function canListForUser(User $actor, User $target, bool $requireEdit = false): bool
     {
-        if ($target->getId()?->equals($actor->getId() ?? Uuid::v4())) {
+        $targetId = $target->getId();
+        $actorId = $actor->getId();
+        if ($targetId !== null && $actorId !== null && $targetId->equals($actorId)) {
             return true;
         }
 
-        return $requireEdit
-            ? $this->hasPermission($actor, 'perm_can_edit_user')
-            : $this->hasPermission($actor, 'perm_can_read_user');
+        if ($requireEdit) {
+            return $this->hasPermission($actor, 'perm_can_edit_user');
+        }
+
+        if ($this->hasPermission($actor, 'perm_can_read_user')) {
+            return true;
+        }
+
+        return $this->taskRepository->hasSharedAssignment($actor, $target);
     }
 
     private function canListForProject(User $actor, Project $project, bool $requireEdit = false): bool
     {
-        if ($project->getCreatedByUser()?->getId()?->equals($actor->getId() ?? Uuid::v4())) {
+        $projectCreatorId = $project->getCreatedByUser()?->getId();
+        $actorId = $actor->getId();
+        if ($projectCreatorId !== null && $actorId !== null && $projectCreatorId->equals($actorId)) {
             return true;
         }
 

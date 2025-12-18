@@ -392,7 +392,9 @@ final class SearchController extends AbstractController
 
     private function projectVisible(Project $project, User $user): bool
     {
-        if ($project->getCreatedByUser()?->getId()?->equals($user->getId() ?? Uuid::v4())) {
+        $projectCreatorId = $project->getCreatedByUser()?->getId();
+        $userId = $user->getId();
+        if ($projectCreatorId !== null && $userId !== null && $projectCreatorId->equals($userId)) {
             return true;
         }
 
@@ -416,7 +418,7 @@ final class SearchController extends AbstractController
 
     private function canReadLogs(User $user): bool
     {
-        return $this->hasPermission($user, 'perm_can_read_user');
+        return $this->hasPermission($user, 'perm_can_read_logs');
     }
 
     private function requireUser(?UserInterface $user): User

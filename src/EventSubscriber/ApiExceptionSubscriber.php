@@ -62,7 +62,7 @@ final class ApiExceptionSubscriber
         }
 
         if ($throwable instanceof HttpExceptionInterface) {
-            $event->setResponse($this->problemResponseFactory->create(ApiProblemException::fromStatus($throwable->getStatusCode(), Response::$statusTexts[$throwable->getStatusCode()] ?? 'Error', $throwable->getMessage() ?: 'Request failed.', strtoupper(str_replace(' ', '_', Response::$statusTexts[$throwable->getStatusCode()] ?? 'ERROR')), $throwable instanceof ApiProblemException ? $throwable->getErrors() : [], $throwable->getHeaders())));
+            $event->setResponse($this->problemResponseFactory->create(ApiProblemException::fromStatus($throwable->getStatusCode(), Response::$statusTexts[$throwable->getStatusCode()] ?? 'Error', $throwable->getMessage() ?: 'Request failed.', strtoupper(str_replace(' ', '_', Response::$statusTexts[$throwable->getStatusCode()] ?? 'ERROR')), [], $throwable->getHeaders())));
             return;
         }
 

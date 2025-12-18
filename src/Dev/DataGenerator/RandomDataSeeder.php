@@ -17,6 +17,9 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RandomDataSeeder
 {
+    private const GUARANTEED_TASKS_FOR_TEAMLEAD = 15;
+    private const GUARANTEED_TASKS_FOR_STAFF = 25;
+
     private const ROLE_PROFILES = [
         'admin' => [
             PermissionEnum::CAN_CREATE_USER,
@@ -27,16 +30,7 @@ final class RandomDataSeeder
             PermissionEnum::CAN_EDIT_ROLES,
             PermissionEnum::CAN_READ_ROLES,
             PermissionEnum::CAN_DELETE_ROLES,
-            PermissionEnum::CAN_CREATE_TASKS,
-            PermissionEnum::CAN_EDIT_TASKS,
-            PermissionEnum::CAN_READ_ALL_TASKS,
-            PermissionEnum::CAN_DELETE_TASKS,
-            PermissionEnum::CAN_ASSIGN_TASKS_TO_USER,
-            PermissionEnum::CAN_ASSIGN_TASKS_TO_PROJECT,
-            PermissionEnum::CAN_CREATE_PROJECTS,
-            PermissionEnum::CAN_EDIT_PROJECTS,
-            PermissionEnum::CAN_READ_PROJECTS,
-            PermissionEnum::CAN_DELETE_PROJECTS,
+            PermissionEnum::CAN_READ_LOGS,
         ],
         'teamlead' => [
             PermissionEnum::CAN_READ_USER,
@@ -51,14 +45,13 @@ final class RandomDataSeeder
             PermissionEnum::CAN_READ_PROJECTS,
         ],
         'staff' => [
-            PermissionEnum::CAN_EDIT_TASKS,
             PermissionEnum::CAN_READ_PROJECTS,
         ],
     ];
 
     private const ROLE_TARGET_COUNTS = [
         'admin' => 2,
-        'teamlead' => 10,
+        'teamlead' => 11,
         'staff' => 100,
     ];
 
@@ -115,6 +108,11 @@ final class RandomDataSeeder
     private ?string $imagesDirectory = null;
     private ?array $cachedFaceImages = null;
     private ?array $cachedGeneralImages = null;
+    private ?User $fixedTeamlead = null;
+    private ?User $fixedTeamlead2 = null;
+    private ?User $fixedStaff = null;
+    private int $remainingGuaranteedTeamleadTasks = self::GUARANTEED_TASKS_FOR_TEAMLEAD;
+    private int $remainingGuaranteedStaffTasks = self::GUARANTEED_TASKS_FOR_STAFF;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -158,7 +156,7 @@ final class RandomDataSeeder
     private function purgeDatabase(): void
     {
         $connection = $this->entityManager->getConnection();
-        $connection->executeStatement('TRUNCATE TABLE image, logs, password_reset_tokens, task, project, user_to_role, role_permission, permission, role, "user" RESTART IDENTITY CASCADE');
+        $connection->executeStatement('TRUNCATE TABLE image, logs, password_reset_tokens, task_assignees, project_team_leads, task, project, user_to_role, role_permission, permission, role, "user" RESTART IDENTITY CASCADE');
         $this->entityManager->clear();
     }
 
@@ -192,7 +190,6 @@ final class RandomDataSeeder
             if (!isset($existing[$enum->value])) {
                 $permission = new Permission();
                 $permission->setName($enum->value);
-                $permission->setDescription('Auto-generated permission');
                 $this->entityManager->persist($permission);
             }
         }
@@ -242,25 +239,41 @@ final class RandomDataSeeder
 
                 if ($i === 0) {
                     $fixedUsers = [
-                        'admin' => ['name' => 'Admin Test', 'email' => 'admin@changeit.de'],
-                        'teamlead' => ['name' => 'Teamlead Test', 'email' => 'teamlead@changeit.de'],
-                        'staff' => ['name' => 'Staff Test', 'email' => 'staff@changeit.de'],
+                        'admin' => ['name' => 'Admin Test', 'email' => 'admin@changeit.test'],
+                        'teamlead' => ['name' => 'Teamlead Test', 'email' => 'teamlead@changeit.test'],
+                        'staff' => ['name' => 'Staff Test', 'email' => 'staff@changeit.test'],
                     ];
                     $user->setName($fixedUsers[$roleSlug]['name']);
                     $user->setEmail($fixedUsers[$roleSlug]['email']);
                     
-                    $password = $this->passwordHasher->hashPassword($user, '123');
+                    if ($roleSlug === 'teamlead') {
+                        $this->fixedTeamlead = $user;
+                    }
+
+                    if ($roleSlug === 'staff') {
+                        $this->fixedStaff = $user;
+                    }
+                } elseif ($i === 1 && $roleSlug === 'teamlead') {
+                    $user->setName('Simon Lage');
+                    $user->setEmail('simon.lage.email@gmail.com');
+                    $this->fixedTeamlead2 = $user;
                 } else {
                     $nameToken = $this->generateNameToken($roleSlug, $i);
                     $user->setName($nameToken['display']);
                     $user->setEmail($nameToken['email']);
-                    
-                    $password = $this->passwordHasher->hashPassword($user, 'Password123!');
                 }
+                
+                $password = $this->passwordHasher->hashPassword($user, '123');
 
                 $user->setPassword($password);
                 $user->setIsPasswordTemporary(false);
-                $user->setActive(true);
+                if ($i === 0 || $roleSlug === 'admin' || ($i === 1 && $roleSlug === 'teamlead')) {
+                    $user->setActive(true);
+                } elseif ($roleSlug === 'teamlead') {
+                    $user->setActive(random_int(0, 100) >= 2);
+                } else {
+                    $user->setActive(random_int(0, 100) >= 5);
+                }
 
                 $createdAt = $this->randomPastDate(300);
                 $user->setCreatedAt($createdAt);
@@ -272,7 +285,7 @@ final class RandomDataSeeder
 
                 $user->assignRole($roles[$roleSlug]);
 
-                $shouldHaveProfileImage = ($i === 0 && $roleSlug !== 'admin') || random_int(0, 100) < 80;
+                $shouldHaveProfileImage = (($i === 0 || ($i === 1 && $roleSlug === 'teamlead')) && $roleSlug !== 'admin') || random_int(0, 100) < 80;
                 if ($shouldHaveProfileImage) {
                     $randomFace = $this->getRandomFaceImage();
                     if ($randomFace !== null) {
@@ -308,12 +321,47 @@ final class RandomDataSeeder
             $project->setName($this->generateProjectName($index));
             $project->setDescription($this->randomProjectDescription());
 
-            $creatorPool = array_merge($usersByRole['admin'], $usersByRole['teamlead']);
+            $creatorPool = $usersByRole['teamlead'];
             $creator = $this->pickRandom($creatorPool);
             $project->setCreatedByUser($creator);
 
+            $teamLeadCount = random_int(0, 100) < 85 ? 1 : 2;
+            $teamLeads = [];
+            if (random_int(0, 100) < 70) {
+                $teamLeads[] = $creator;
+            }
+
+            if ($this->fixedTeamlead instanceof User && $this->remainingGuaranteedTeamleadTasks > 0) {
+                if (!in_array($this->fixedTeamlead, $teamLeads, true)) {
+                    $teamLeads[] = $this->fixedTeamlead;
+                }
+            }
+
+            if ($this->fixedTeamlead2 instanceof User && random_int(0, 100) < 60) {
+                if (!in_array($this->fixedTeamlead2, $teamLeads, true)) {
+                    $teamLeads[] = $this->fixedTeamlead2;
+                }
+            }
+
+            while (count($teamLeads) < $teamLeadCount) {
+                $candidate = $this->pickRandom($usersByRole['teamlead']);
+                if (!in_array($candidate, $teamLeads, true)) {
+                    $teamLeads[] = $candidate;
+                }
+            }
+
+            foreach ($teamLeads as $teamLead) {
+                $project->addTeamLead($teamLead);
+            }
+
             $createdAt = $this->randomPastDate(240);
             $project->setCreatedAt($createdAt);
+
+            if (random_int(0, 100) < 12) {
+                $project->setIsCompleted(true);
+                $project->setCompletedAt(\DateTime::createFromImmutable($createdAt->modify(sprintf('+%d days', random_int(5, 60)))));
+                $project->setCompletedByUser($this->pickRandom($teamLeads));
+            }
 
             $this->entityManager->persist($project);
             $projects[] = $project;
@@ -322,20 +370,32 @@ final class RandomDataSeeder
                 $imageCount += $this->createImagesForProject($project, $creator);
             }
 
-            $taskResult = $this->createTasksForProject($project, $taskTotal, $usersByRole['teamlead'], $usersByRole['staff'], $createdAt);
+            $taskResult = $this->createTasksForProject(
+                $project,
+                $taskTotal,
+                $teamLeads,
+                $teamLeads,
+                $usersByRole['staff'],
+                $createdAt
+            );
             $taskCount += $taskResult['taskCount'];
             $imageCount += $taskResult['imageCount'];
         }
+
+        $freeTasksResult = $this->createTasksWithoutProject($usersByRole['teamlead'], $usersByRole['staff']);
+        $taskCount += $freeTasksResult['taskCount'];
+        $imageCount += $freeTasksResult['imageCount'];
 
         return ['projects' => $projects, 'taskCount' => $taskCount, 'imageCount' => $imageCount];
     }
 
     /**
      * @param User[] $creators
-     * @param User[] $assignees
+     * @param User[] $teamleadAssignees
+     * @param User[] $staffAssignees
      * @return array{taskCount: int, imageCount: int}
      */
-    private function createTasksForProject(Project $project, int $taskTotal, array $creators, array $assignees, \DateTimeImmutable $projectCreatedAt): array
+    private function createTasksForProject(Project $project, int $taskTotal, array $creators, array $teamleadAssignees, array $staffAssignees, \DateTimeImmutable $projectCreatedAt): array
     {
         if ($taskTotal === 0) {
             return ['taskCount' => 0, 'imageCount' => 0];
@@ -343,6 +403,7 @@ final class RandomDataSeeder
 
         $created = 0;
         $imageCount = 0;
+        $allAssignees = array_merge($teamleadAssignees, $staffAssignees);
 
         for ($i = 0; $i < $taskTotal; $i++) {
             $task = new Task();
@@ -355,14 +416,36 @@ final class RandomDataSeeder
             $createdAt = $this->randomTaskCreationDate($projectCreatedAt);
             $task->setCreatedAt($createdAt);
             $creator = $this->pickRandom($creators);
-            $task->setCreatedByUser($creator);
 
-            if (random_int(0, 100) < 85) {
-                $assigneeCount = random_int(1, min(3, count($assignees)));
-                $selectedAssignees = (array) array_rand(array_flip(range(0, count($assignees) - 1)), $assigneeCount);
+            if ($this->fixedTeamlead instanceof User && $this->remainingGuaranteedTeamleadTasks > 0) {
+                $creator = $this->fixedTeamlead;
+                $this->remainingGuaranteedTeamleadTasks--;
+            } elseif ($this->fixedTeamlead2 instanceof User && random_int(0, 100) < 30) {
+                $creator = $this->fixedTeamlead2;
+            }
+
+            $task->setCreatedByUser($creator);
+            $task->setReviewerUser(null);
+
+            if (random_int(0, 100) < 90) {
+                $assigneeCount = random_int(1, min(4, count($allAssignees)));
+                $selectedAssignees = (array) array_rand(array_flip(range(0, count($allAssignees) - 1)), $assigneeCount);
                 foreach ($selectedAssignees as $index) {
-                    $task->assignUser($assignees[$index]);
+                    $task->assignUser($allAssignees[$index]);
                 }
+            }
+
+            if ($this->fixedStaff instanceof User && $this->remainingGuaranteedStaffTasks > 0) {
+                $task->assignUser($this->fixedStaff);
+                $this->remainingGuaranteedStaffTasks--;
+            }
+
+            if ($this->fixedTeamlead instanceof User && random_int(0, 100) < 70) {
+                $task->assignUser($this->fixedTeamlead);
+            }
+
+            if ($this->fixedTeamlead2 instanceof User && random_int(0, 100) < 60) {
+                $task->assignUser($this->fixedTeamlead2);
             }
 
             if (random_int(0, 100) < 70) {
@@ -373,10 +456,72 @@ final class RandomDataSeeder
                 $task->setUpdatedAt($this->randomUpdateDate($createdAt));
             }
 
+            if (in_array($task->getStatus(), ['done', 'cancelled'], true)) {
+                $task->setFinalizedByUser($this->pickRandom($teamleadAssignees));
+                $task->setFinalizedAt(\DateTime::createFromImmutable($createdAt->modify(sprintf('+%d days', random_int(1, 45)))));
+            }
+
             $this->entityManager->persist($task);
             $created++;
 
             if (random_int(0, 100) < 30) {
+                $imageCount += $this->createImagesForTask($task, $creator);
+            }
+        }
+
+        return ['taskCount' => $created, 'imageCount' => $imageCount];
+    }
+
+    /**
+     * @param User[] $teamleads
+     * @param User[] $staffAssignees
+     * @return array{taskCount: int, imageCount: int}
+     */
+    private function createTasksWithoutProject(array $teamleads, array $staffAssignees): array
+    {
+        $taskTotal = 30;
+        $created = 0;
+        $imageCount = 0;
+
+        for ($i = 0; $i < $taskTotal; $i++) {
+            $creator = $this->pickRandom($teamleads);
+
+            $task = new Task();
+            $task->setTitle(sprintf('Interne Aufgabe – %s #%d', $this->pickRandom(self::TASK_TITLES), $i + 1));
+            $task->setDescription($this->maybePick(self::TASK_NOTES));
+            $task->setStatus($this->pickRandom(self::STATUSES));
+            $task->setPriority($this->pickRandom(self::PRIORITIES));
+
+            $createdAt = $this->randomPastDate(120);
+            $task->setCreatedAt($createdAt);
+            $task->setCreatedByUser($creator);
+            $task->setReviewerUser($creator);
+
+            if (random_int(0, 100) < 75) {
+                $assigneeCount = random_int(1, min(3, count($staffAssignees)));
+                $selectedAssignees = (array) array_rand(array_flip(range(0, count($staffAssignees) - 1)), $assigneeCount);
+                foreach ($selectedAssignees as $index) {
+                    $task->assignUser($staffAssignees[$index]);
+                }
+            }
+
+            if (random_int(0, 100) < 40) {
+                $task->setDueDate($this->randomDueDate($createdAt));
+            }
+
+            if (random_int(0, 100) < 50) {
+                $task->setUpdatedAt($this->randomUpdateDate($createdAt));
+            }
+
+            if (in_array($task->getStatus(), ['done', 'cancelled'], true)) {
+                $task->setFinalizedByUser($creator);
+                $task->setFinalizedAt(\DateTime::createFromImmutable($createdAt->modify(sprintf('+%d days', random_int(1, 30)))));
+            }
+
+            $this->entityManager->persist($task);
+            $created++;
+
+            if (random_int(0, 100) < 20) {
                 $imageCount += $this->createImagesForTask($task, $creator);
             }
         }
@@ -406,7 +551,7 @@ final class RandomDataSeeder
 
         $emailLocal = strtolower(sprintf('%s.%s.%s%02d', $first, $last, $suffix, $index + 1));
         $emailLocal = preg_replace('/[^a-z0-9\.]+/', '', $emailLocal) ?? 'user';
-        $email = sprintf('%s@changeit.de', $emailLocal);
+        $email = sprintf('%s@changeit.test', $emailLocal);
 
         return [
             'display' => $display,
@@ -586,6 +731,10 @@ final class RandomDataSeeder
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         $image->setFileType($extension);
+
+        if ($type === 'profile') {
+            $image->setUser($uploader);
+        }
 
         $this->entityManager->persist($image);
         $this->imageStorage->store($image, $filePath);

@@ -21,7 +21,10 @@ final class CreateTaskRequest implements JsonRequestDto
         #[Assert\NotBlank]
         #[Assert\Length(max: 50)]
         public readonly string $priority,
-        #[Assert\DateTime]
+        #[Assert\AtLeastOneOf([
+            new Assert\Date(),
+            new Assert\DateTime(),
+        ])]
         public readonly ?string $dueDate,
         public readonly ?array $assignedUserIds,
         public readonly ?string $projectId,

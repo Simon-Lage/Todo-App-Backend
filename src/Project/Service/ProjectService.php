@@ -31,6 +31,7 @@ final class ProjectService
         $project->setName($name);
         $project->setDescription($description);
         $project->setCreatedByUser($creator);
+        $project->addTeamLead($creator);
 
         $this->entityManager->persist($project);
         $this->entityManager->flush();
@@ -60,6 +61,24 @@ final class ProjectService
         $this->imageRepository->deleteByProject($project);
         $this->entityManager->remove($project);
         $this->entityManager->flush();
+    }
+
+    public function addTeamLead(Project $project, User $teamLead): Project
+    {
+        $project->addTeamLead($teamLead);
+        $this->entityManager->flush();
+
+        return $project;
+    }
+
+    public function complete(Project $project, User $actor): Project
+    {
+        $project->setIsCompleted(true);
+        $project->setCompletedAt(new \DateTimeImmutable());
+        $project->setCompletedByUser($actor);
+        $this->entityManager->flush();
+
+        return $project;
     }
 
     private function assertNameIsAvailable(string $name, ?Project $current = null): void

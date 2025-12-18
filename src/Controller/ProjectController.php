@@ -16,8 +16,10 @@ use App\Project\Service\ProjectQueryService;
 use App\Project\Service\ProjectService;
 use App\Project\View\ProjectSummaryViewFactory;
 use App\Project\View\ProjectViewFactory;
+use App\Repository\TaskRepository;
 use App\Repository\ProjectRepository;
 use App\Security\Permission\PermissionRegistry;
+use App\Security\Permission\PermissionEnum;
 use App\Task\Service\TaskQueryService;
 use App\Task\View\TaskSummaryViewFactory;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -44,6 +46,7 @@ final class ProjectController extends AbstractController
         private readonly PermissionRegistry $permissionRegistry,
         private readonly ProjectRepository $projectRepository,
         private readonly TaskQueryService $taskQueryService,
+        private readonly TaskRepository $taskRepository,
         private readonly AuditLogger $auditLogger
     ) {
     }
@@ -61,6 +64,25 @@ final class ProjectController extends AbstractController
 
         $result = $this->projectQueryService->list($filters, $offset, $limit, $sortBy, $direction);
 
+        $items = array_map(fn(Project $project) => $this->projectSummaryViewFactory->make($project), $result['items']);
+
+        return $this->responseFactory->collection($items, $result['total'], $offset, $limit, $sortBy, strtoupper($direction));
+    }
+
+    #[Route('/my', name: 'api_project_my', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function my(Request $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $user = $this->requireUser($currentUser);
+
+        [$offset, $limit, $sortBy, $direction] = $this->resolvePagination($request, ['created_at', 'name']);
+
+        $filters = [
+            'q' => $request->query->get('q'),
+        ];
+
+        $includeTeamLead = $this->permissionRegistry->has($user, PermissionEnum::CAN_READ_ALL_TASKS->value);
+        $result = $this->projectQueryService->listMy($user, $filters, $includeTeamLead, $offset, $limit, $sortBy, $direction);
         $items = array_map(fn(Project $project) => $this->projectSummaryViewFactory->make($project), $result['items']);
 
         return $this->responseFactory->collection($items, $result['total'], $offset, $limit, $sortBy, strtoupper($direction));
@@ -98,6 +120,46 @@ final class ProjectController extends AbstractController
             [],
             Response::HTTP_CREATED
         );
+    }
+
+    #[Route('/{id}/teamleads/me', name: 'api_project_join_teamlead', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function joinAsTeamLead(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $actor = $this->requireUser($currentUser);
+        if (!$this->permissionRegistry->has($actor, PermissionEnum::CAN_READ_ALL_TASKS->value)) {
+            throw ApiProblemException::forbidden('Only teamleads can join a project as teamlead.');
+        }
+
+        $project = $this->findProject($id);
+        $updated = $this->projectService->addTeamLead($project, $actor);
+
+        $this->auditLogger->record('project.teamlead.join', $actor, [
+            'project_id' => $project->getId()?->toRfc4122(),
+            'teamlead_user_id' => $actor->getId()?->toRfc4122(),
+        ]);
+
+        return $this->responseFactory->single($this->projectViewFactory->make($updated));
+    }
+
+    #[Route('/{id}/complete', name: 'api_project_complete', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function complete(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $actor = $this->requireUser($currentUser);
+        $project = $this->findProject($id);
+
+        if (!$project->isTeamLead($actor)) {
+            throw ApiProblemException::forbidden('Only a project teamlead can complete this project.');
+        }
+
+        $updated = $this->projectService->complete($project, $actor);
+
+        $this->auditLogger->record('project.complete', $actor, [
+            'project_id' => $project->getId()?->toRfc4122(),
+        ]);
+
+        return $this->responseFactory->single($this->projectViewFactory->make($updated));
     }
 
     #[Route('/{id}', name: 'api_project_update', methods: ['PATCH'])]
@@ -140,7 +202,7 @@ final class ProjectController extends AbstractController
         $project = $this->findProject($id);
 
         $owner = $this->isProjectOwner($project, $user);
-        if (!$owner && (!$this->hasPermission($user, 'perm_can_read_projects') || !$this->hasPermission($user, 'perm_can_read_all_tasks'))) {
+        if (!$owner && !$this->hasPermission($user, 'perm_can_read_projects')) {
             throw ApiProblemException::forbidden('Insufficient permissions to list tasks for this project.');
         }
 
@@ -157,11 +219,42 @@ final class ProjectController extends AbstractController
             'q' => $request->query->get('q'),
         ];
 
-        $restrictScope = false;
+        $restrictScope = !($owner || $project->isTeamLead($user) || $this->hasPermission($user, 'perm_can_read_all_tasks'));
         $result = $this->taskQueryService->list($user, $filters, $restrictScope, $offset, $limit, $sortBy, $direction);
         $items = array_map(fn(Task $task) => $this->taskSummaryViewFactory->make($task), $result['items']);
 
         return $this->responseFactory->collection($items, $result['total'], $offset, $limit, $sortBy, strtoupper($direction));
+    }
+
+    #[Route('/{id}/stats', name: 'api_project_stats', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function stats(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $user = $this->requireUser($currentUser);
+        $project = $this->findProject($id);
+
+        $owner = $this->isProjectOwner($project, $user);
+        if (!$owner && !$this->hasPermission($user, 'perm_can_read_projects')) {
+            throw ApiProblemException::forbidden('Insufficient permissions to read project stats.');
+        }
+
+        $knownStatuses = ['open', 'in_progress', 'review', 'done', 'cancelled'];
+        $counts = $this->taskRepository->countByProjectGroupedByStatus($project);
+
+        $byStatus = [];
+        $total = 0;
+        foreach ($knownStatuses as $status) {
+            $count = (int) ($counts[$status] ?? 0);
+            $byStatus[$status] = $count;
+            $total += $count;
+        }
+
+        return $this->responseFactory->single([
+            'tasks' => [
+                'total' => $total,
+                'by_status' => $byStatus,
+            ],
+        ]);
     }
 
     private function requireUser(?UserInterface $user): User

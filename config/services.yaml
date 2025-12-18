@@ -45,6 +45,15 @@ services:
         arguments:
             $passwordResetUrlTemplate: '%env(PASSWORD_RESET_URL_TEMPLATE)%'
 
+    App\Ai\Service\GoogleStudioClient:
+        lazy: true
+        arguments:
+            $apiKey: '%env(GOOGLE_STUDIO_API_KEY)%'
+
+    App\Ai\Service\TaskTextEnhancer:
+        arguments:
+            $debug: '%kernel.debug%'
+
     App\Image\Service\ImageStorage:
         arguments:
             $uploadDir: '%image_storage_dir%'

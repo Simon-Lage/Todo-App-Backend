@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Role\View;
 
 use App\Entity\Role;
-use App\Security\Permission\PermissionRegistry;
+use App\Security\Permission\PermissionEnum;
 
 final class RoleViewFactory
 {
@@ -16,8 +16,16 @@ final class RoleViewFactory
             'name' => $role->getName(),
         ];
 
-        foreach (PermissionRegistry::MAP as $key => $getter) {
-            $payload[$key] = (bool) $role->$getter();
+        $assigned = [];
+        foreach ($role->getPermissions() as $permission) {
+            $name = $permission->getName();
+            if ($name !== null) {
+                $assigned[$name] = true;
+            }
+        }
+
+        foreach (PermissionEnum::cases() as $permission) {
+            $payload[$permission->value] = $assigned[$permission->value] ?? false;
         }
 
         return $payload;

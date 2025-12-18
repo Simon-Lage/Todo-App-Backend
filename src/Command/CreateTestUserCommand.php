@@ -45,10 +45,22 @@ final class CreateTestUserCommand extends Command
         $adminRole = $this->roleRepository->findOneBy(['name' => 'Administrator']);
         if (!$adminRole) {
             $adminRole = new Role();
-            $adminRole->setName('Administrator');
+            $adminRole->setName('admin');
             $this->em->persist($adminRole);
 
-            foreach (PermissionEnum::cases() as $permEnum) {
+            $allowed = [
+                PermissionEnum::CAN_CREATE_USER,
+                PermissionEnum::CAN_EDIT_USER,
+                PermissionEnum::CAN_READ_USER,
+                PermissionEnum::CAN_DELETE_USER,
+                PermissionEnum::CAN_CREATE_ROLES,
+                PermissionEnum::CAN_EDIT_ROLES,
+                PermissionEnum::CAN_READ_ROLES,
+                PermissionEnum::CAN_DELETE_ROLES,
+                PermissionEnum::CAN_READ_LOGS,
+            ];
+
+            foreach ($allowed as $permEnum) {
                 $perm = $this->permissionRepository->findOneBy(['name' => $permEnum->value]);
                 if (!$perm) {
                     $perm = new Permission();

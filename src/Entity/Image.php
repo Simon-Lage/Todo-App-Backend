@@ -37,6 +37,10 @@ class Image
     #[ORM\Column(length: 50)]
     private ?string $type = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $user = null;
+
     public function __construct()
     {
         $this->id = Uuid::v4();
@@ -122,6 +126,17 @@ class Image
     public function setType(string $type): static
     {
         $this->type = $type;
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
         return $this;
     }
 }

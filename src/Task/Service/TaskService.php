@@ -20,6 +20,8 @@ use Symfony\Component\Uid\Uuid;
 
 final class TaskService
 {
+    private const FINAL_STATUSES = ['done', 'cancelled'];
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly TaskRepository $taskRepository,
@@ -51,7 +53,14 @@ final class TaskService
         }
 
         if ($request->projectId !== null) {
-            $task->setProject($this->findProject($request->projectId));
+            $project = $this->findProject($request->projectId);
+            if (!$project->isTeamLead($creator)) {
+                throw ApiProblemException::forbidden('Only a project teamlead can create tasks for this project.');
+            }
+            $task->setProject($project);
+            $task->setReviewerUser(null);
+        } else {
+            $task->setReviewerUser($creator);
         }
 
         $this->entityManager->persist($task);
@@ -85,10 +94,18 @@ final class TaskService
         return $task;
     }
 
-    public function changeStatus(Task $task, string $status): Task
+    public function changeStatus(Task $task, string $status, User $actor): Task
     {
+        $this->assertCanChangeStatus($task, $status, $actor);
+
         $task->setStatus($status);
         $task->setUpdatedAt(new DateTimeImmutable());
+
+        if (in_array($status, self::FINAL_STATUSES, true)) {
+            $task->setFinalizedByUser($actor);
+            $task->setFinalizedAt(new DateTimeImmutable());
+        }
+
         $this->entityManager->flush();
 
         return $task;
@@ -97,8 +114,9 @@ final class TaskService
     /**
      * @param string[] $userIds
      */
-    public function assignUsers(Task $task, array $userIds): Task
+    public function assignUsers(Task $task, array $userIds, User $actor): Task
     {
+        $this->assertCanManageAssignments($task, $actor, 'assign');
         $task->clearAssignedUsers();
         
         foreach ($userIds as $userId) {
@@ -112,8 +130,9 @@ final class TaskService
         return $task;
     }
 
-    public function assignUser(Task $task, string $userId): Task
+    public function assignUser(Task $task, string $userId, User $actor): Task
     {
+        $this->assertCanManageAssignments($task, $actor, 'assign');
         $user = $this->findUser($userId);
         $task->assignUser($user);
         $task->setUpdatedAt(new DateTimeImmutable());
@@ -122,8 +141,9 @@ final class TaskService
         return $task;
     }
 
-    public function unassignUser(Task $task, string $userId): Task
+    public function unassignUser(Task $task, string $userId, User $actor): Task
     {
+        $this->assertCanManageAssignments($task, $actor, 'unassign');
         $user = $this->findUser($userId);
         $task->unassignUser($user);
         $task->setUpdatedAt(new DateTimeImmutable());
@@ -132,8 +152,9 @@ final class TaskService
         return $task;
     }
 
-    public function clearAssignees(Task $task): Task
+    public function clearAssignees(Task $task, User $actor): Task
     {
+        $this->assertCanManageAssignments($task, $actor, 'clear');
         $task->clearAssignedUsers();
         $task->setUpdatedAt(new DateTimeImmutable());
         $this->entityManager->flush();
@@ -141,12 +162,20 @@ final class TaskService
         return $task;
     }
 
-    public function moveToProject(Task $task, ?string $projectId): Task
+    public function moveToProject(Task $task, ?string $projectId, User $actor): Task
     {
+        $this->assertCanManageAssignments($task, $actor, 'move');
+
         if ($projectId === null || $projectId === '') {
             $task->setProject(null);
+            $task->setReviewerUser($task->getCreatedByUser());
         } else {
-            $task->setProject($this->findProject($projectId));
+            $targetProject = $this->findProject($projectId);
+            if (!$targetProject->isTeamLead($actor)) {
+                throw ApiProblemException::forbidden('Only a teamlead of the target project can move this task to that project.');
+            }
+            $task->setProject($targetProject);
+            $task->setReviewerUser(null);
         }
 
         $task->setUpdatedAt(new DateTimeImmutable());
@@ -211,5 +240,49 @@ final class TaskService
         } catch (\Exception $exception) {
             throw ApiProblemException::validation([$field => ['Invalid date format.']]);
         }
+    }
+
+    private function assertCanManageAssignments(Task $task, User $actor, string $action): void
+    {
+        $project = $task->getProject();
+        if ($project instanceof Project) {
+            if ($project->isTeamLead($actor)) {
+                return;
+            }
+            throw ApiProblemException::forbidden(sprintf('Only a project teamlead can %s assignments for this task.', $action));
+        }
+
+        $creatorId = $task->getCreatedByUser()?->getId();
+        if ($creatorId !== null && $creatorId->equals($actor->getId())) {
+            return;
+        }
+
+        throw ApiProblemException::forbidden(sprintf('Only the task creator can %s assignments for this task.', $action));
+    }
+
+    private function assertCanChangeStatus(Task $task, string $newStatus, User $actor): void
+    {
+        if (!in_array($newStatus, ['open', 'in_progress', 'review', 'done', 'cancelled'], true)) {
+            throw ApiProblemException::validation(['status' => ['Invalid status.']]);
+        }
+
+        if (!in_array($newStatus, self::FINAL_STATUSES, true)) {
+            return;
+        }
+
+        $project = $task->getProject();
+        if ($project instanceof Project) {
+            if ($project->isTeamLead($actor)) {
+                return;
+            }
+            throw ApiProblemException::forbidden('Only a project teamlead can set this task to done or cancelled.');
+        }
+
+        $creatorId = $task->getCreatedByUser()?->getId();
+        if ($creatorId !== null && $creatorId->equals($actor->getId())) {
+            return;
+        }
+
+        throw ApiProblemException::forbidden('Only the task creator can set this task to done or cancelled when it has no project.');
     }
 }

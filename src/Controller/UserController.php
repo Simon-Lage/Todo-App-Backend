@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Doctrine\ORM\EntityManagerInterface;
 use App\Auth\Service\PasswordResetTokenService;
 use App\Entity\Project;
+use App\Entity\Role;
 use App\Entity\Task;
 use App\Entity\User;
+use App\Entity\Image;
 use App\Exception\ApiProblemException;
 use App\Http\Response\ApiResponseFactory;
+use App\Repository\ImageRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\RoleRepository;
 use App\Repository\TaskRepository;
@@ -29,12 +33,13 @@ use App\User\View\UserListViewFactory;
 use App\User\View\UserViewFactory;
 use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Security\Http\Attribute\CurrentUser;
+	use Symfony\Component\HttpFoundation\JsonResponse;
+	use Symfony\Component\HttpFoundation\Request;
+	use Symfony\Component\HttpFoundation\Response;
+	use Symfony\Component\Routing\Attribute\Route;
+	use Symfony\Component\Routing\Requirement\Requirement;
+	use Symfony\Component\Security\Core\User\UserInterface;
+	use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Uuid;
 
@@ -56,6 +61,8 @@ final class UserController extends AbstractController
         private readonly RoleRepository $roleRepository,
         private readonly TaskRepository $taskRepository,
         private readonly ProjectRepository $projectRepository,
+        private readonly ImageRepository $imageRepository,
+        private readonly EntityManagerInterface $entityManager,
         private readonly AuditLogger $auditLogger
     ) {
     }
@@ -81,11 +88,11 @@ final class UserController extends AbstractController
         return $this->responseFactory->single($this->permissionRegistry->resolve($user));
     }
 
-    #[Route('/{id}', name: 'api_user_show', methods: ['GET'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
-    public function show(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
-    {
-        $user = $this->findUser($id);
+	    #[Route('/{id}', name: 'api_user_show', methods: ['GET'], requirements: ['id' => Requirement::UUID])]
+	    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+	    public function show(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+	    {
+	        $user = $this->findUser($id);
 
         $current = $this->requireUser($currentUser);
 
@@ -174,12 +181,55 @@ final class UserController extends AbstractController
         return $this->responseFactory->single($this->userViewFactory->make($updated));
     }
 
+    #[Route('/profile-image', name: 'api_user_set_profile_image', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function setProfileImage(Request $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $account = $this->requireUser($currentUser);
+
+        try {
+            $payload = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw ApiProblemException::fromStatus(400, 'Bad Request', 'Malformed JSON payload.', 'PAYLOAD_INVALID');
+        }
+
+        $imageId = array_key_exists('image_id', $payload) ? ($payload['image_id'] === null ? null : (string) $payload['image_id']) : null;
+        if ($imageId === null || trim($imageId) === '') {
+            throw ApiProblemException::validation(['image_id' => ['Image id is required.']]);
+        }
+
+        try {
+            $uuid = Uuid::fromString($imageId);
+        } catch (\InvalidArgumentException) {
+            throw ApiProblemException::validation(['image_id' => ['Invalid UUID.']]);
+        }
+
+        $image = $this->imageRepository->find($uuid);
+        if (!$image instanceof Image) {
+            throw ApiProblemException::validation(['image_id' => ['Image not found.']]);
+        }
+
+        if (!$image->getUser() instanceof User || $image->getUser()->getId()?->equals($account->getId()) !== true) {
+            throw ApiProblemException::forbidden('You are not allowed to use this image as profile image.');
+        }
+
+        $account->setProfileImage($image);
+        $this->entityManager->flush();
+
+        $this->auditLogger->record('user.profile_image.update', $account, [
+            'image_id' => $image->getId()?->toRfc4122(),
+        ]);
+
+        return $this->responseFactory->single($this->userViewFactory->make($account));
+    }
+
     #[Route('/{id}', name: 'api_user_update_admin', methods: ['PATCH'])]
     #[IsGranted('perm:perm_can_edit_user')]
     public function updateAdmin(string $id, AdminUpdateUserRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $user = $this->findUser($id);
+        $this->denyIfProtectedAdminAccount($actor, $user);
         $updated = $this->userService->update($user, $request->name, $request->email, $request->active, $request->roles);
 
         $this->auditLogger->record('user.update', $actor, [
@@ -196,6 +246,7 @@ final class UserController extends AbstractController
     {
         $actor = $this->requireUser($currentUser);
         $user = $this->findUser($id);
+        $this->denyIfProtectedAdminAccount($actor, $user);
         $this->userService->deactivate($user);
 
         $this->auditLogger->record('user.deactivate', $actor, [
@@ -211,6 +262,7 @@ final class UserController extends AbstractController
     {
         $actor = $this->requireUser($currentUser);
         $user = $this->findUser($id);
+        $this->denyIfProtectedAdminAccount($actor, $user);
         $this->userService->reactivate($user);
 
         $this->auditLogger->record('user.reactivate', $actor, [
@@ -234,6 +286,25 @@ final class UserController extends AbstractController
         ]);
 
         return $this->responseFactory->single(['message' => 'Reset link sent.']);
+    }
+
+    #[Route('/find-id-by-email', name: 'api_user_find_id_by_email', methods: ['POST'])]
+    public function findIdByEmail(VerifyPasswordResetEmailRequest $request): JsonResponse
+    {
+        $email = strtolower($request->email);
+        $user = $this->userRepository->findOneBy(['email' => $email]);
+
+        if (!$user instanceof User) {
+            throw ApiProblemException::notFound('User not found.');
+        }
+
+        if (!$user->isActive()) {
+            throw ApiProblemException::fromStatus(403, 'Forbidden', 'User account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
+        }
+
+        return $this->responseFactory->single([
+            'user_id' => $user->getId()?->toRfc4122(),
+        ]);
     }
 
     #[Route('/verify-email-for-password-reset/{id}', name: 'api_user_verify_email_for_password_reset', methods: ['POST'])]
@@ -457,6 +528,32 @@ final class UserController extends AbstractController
         }
 
         return $user;
+    }
+
+    private function denyIfProtectedAdminAccount(User $actor, User $target): void
+    {
+        if (!$this->isAdminAccount($target)) {
+            return;
+        }
+
+        $actorId = $actor->getId();
+        $targetId = $target->getId();
+        if ($actorId !== null && $targetId !== null && $actorId->equals($targetId)) {
+            return;
+        }
+
+        throw ApiProblemException::forbidden('Admin accounts can only be modified by the account owner.');
+    }
+
+    private function isAdminAccount(User $user): bool
+    {
+        foreach ($user->getRoleEntities() as $role) {
+            if ($role instanceof Role && strtolower((string) $role->getName()) === 'admin') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function parseDate(string $value, string $field): DateTimeImmutable

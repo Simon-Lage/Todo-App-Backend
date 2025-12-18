@@ -52,6 +52,17 @@ class Task
     #[ORM\OneToMany(mappedBy: 'task', targetEntity: Image::class)]
     private Collection $images;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $reviewer_user = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $finalized_by_user = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $finalized_at = null;
+
     public function __construct()
     {
         $this->id = Uuid::v4();
@@ -221,6 +232,39 @@ class Task
                 $image->setTask(null);
             }
         }
+        return $this;
+    }
+
+    public function getReviewerUser(): ?User
+    {
+        return $this->reviewer_user;
+    }
+
+    public function setReviewerUser(?User $reviewer_user): static
+    {
+        $this->reviewer_user = $reviewer_user;
+        return $this;
+    }
+
+    public function getFinalizedByUser(): ?User
+    {
+        return $this->finalized_by_user;
+    }
+
+    public function setFinalizedByUser(?User $finalized_by_user): static
+    {
+        $this->finalized_by_user = $finalized_by_user;
+        return $this;
+    }
+
+    public function getFinalizedAt(): ?\DateTimeInterface
+    {
+        return $this->finalized_at;
+    }
+
+    public function setFinalizedAt(?\DateTimeInterface $finalized_at): static
+    {
+        $this->finalized_at = $finalized_at;
         return $this;
     }
 }

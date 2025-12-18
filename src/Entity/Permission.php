@@ -16,9 +16,6 @@ class Permission
     #[ORM\Column(length: 100, unique: true)]
     private ?string $name = null;
 
-    #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $description = null;
-
     public function __construct()
     {
         $this->id = Uuid::v4();
@@ -37,18 +34,6 @@ class Permission
     public function setName(string $name): static
     {
         $this->name = $name;
-
-        return $this;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function setDescription(?string $description): static
-    {
-        $this->description = $description;
 
         return $this;
     }

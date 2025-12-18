@@ -16,7 +16,10 @@ final class UpdateTaskRequest implements JsonRequestDto
         public readonly ?string $description,
         #[Assert\Length(max: 50)]
         public readonly ?string $priority,
-        #[Assert\DateTime]
+        #[Assert\AtLeastOneOf([
+            new Assert\Date(),
+            new Assert\DateTime(),
+        ])]
         public readonly ?string $dueDate,
         public readonly bool $clearDueDate
     ) {

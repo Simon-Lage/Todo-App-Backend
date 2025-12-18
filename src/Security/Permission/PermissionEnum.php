@@ -27,5 +27,7 @@ enum PermissionEnum: string
     case CAN_EDIT_PROJECTS = 'perm_can_edit_projects';
     case CAN_READ_PROJECTS = 'perm_can_read_projects';
     case CAN_DELETE_PROJECTS = 'perm_can_delete_projects';
+
+    case CAN_READ_LOGS = 'perm_can_read_logs';
 }
 

@@ -2,17 +2,29 @@
 
 ## Feste Test-Accounts (nach Seed-Command)
 
-Diese 3 Test-Benutzer werden **immer** mit denselben Daten erstellt:
+Diese 4 Test-Benutzer werden **immer** mit denselben Daten erstellt:
 
 ### 🔴 **Administrator**
 - **E-Mail:** `admin@changeit.test`
-- **Passwort:** `Password123!`
+- **Passwort:** `123`
 - **Rolle:** Admin
 - **Berechtigungen:** ALLE (User, Rollen, Tasks, Projekte - vollständige CRUD)
 
-### 🟡 **Abteilungsleiter (Teamlead)**
+### 🟡 **Abteilungsleiter (Teamlead) #1**
 - **E-Mail:** `teamlead@changeit.test`
-- **Passwort:** `Password123!`
+- **Passwort:** `123`
+- **Rolle:** Teamlead
+- **Berechtigungen:**
+  - ✅ User lesen
+  - ✅ Rollen lesen
+  - ✅ Tasks erstellen, bearbeiten, alle lesen, zuweisen
+  - ✅ Projekte erstellen, bearbeiten, lesen
+  - ❌ Keine Admin-Rechte (User/Rollen verwalten)
+  - ❌ Keine Lösch-Rechte
+
+### 🟡 **Abteilungsleiter (Teamlead) #2**
+- **E-Mail:** `simon.lage.email@gmail.com`
+- **Passwort:** `123`
 - **Rolle:** Teamlead
 - **Berechtigungen:**
   - ✅ User lesen
@@ -24,7 +36,7 @@ Diese 3 Test-Benutzer werden **immer** mit denselben Daten erstellt:
 
 ### 🟢 **Mitarbeiter (Staff)**
 - **E-Mail:** `staff@changeit.test`
-- **Passwort:** `Password123!`
+- **Passwort:** `123`
 - **Rolle:** Staff
 - **Berechtigungen:**
   - ✅ Tasks bearbeiten (nur eigene)
@@ -37,12 +49,12 @@ Diese 3 Test-Benutzer werden **immer** mit denselben Daten erstellt:
 
 ## Zusätzliche Random-User
 
-Neben den 3 festen Test-Accounts werden auch generiert:
+Neben den 4 festen Test-Accounts werden auch generiert:
 - **1 weiterer Admin** (zufälliger Name)
 - **9 weitere Teamleads** (zufällige Namen)
 - **99 weitere Staff-Member** (zufällige Namen)
 
-**Alle haben das gleiche Passwort:** `Password123!`
+**Alle haben das gleiche Passwort:** `123`
 
 **E-Mail-Format:** `{vorname}.{nachname}.{rolle}{nummer}@changeit.test`
 

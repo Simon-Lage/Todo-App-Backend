@@ -15,11 +15,13 @@ use App\Security\Permission\PermissionRegistry;
 use App\Security\Voter\TaskVoter;
 use App\Task\Dto\AssignUserRequest;
 use App\Task\Dto\AssignUsersRequest;
+use App\Task\Dto\BeautifyTaskRequest;
 use App\Task\Dto\CreateTaskRequest;
 use App\Task\Dto\MoveTaskRequest;
 use App\Task\Dto\UnassignUserRequest;
 use App\Task\Dto\UpdateTaskRequest;
 use App\Task\Dto\UpdateTaskStatusRequest;
+use App\Ai\Service\TaskTextEnhancer;
 use App\Task\Service\TaskQueryService;
 use App\Task\Service\TaskService;
 use App\Task\View\TaskSummaryViewFactory;
@@ -45,7 +47,8 @@ final class TaskController extends AbstractController
         private readonly TaskSummaryViewFactory $taskSummaryViewFactory,
         private readonly TaskRepository $taskRepository,
         private readonly PermissionRegistry $permissionRegistry,
-        private readonly AuditLogger $auditLogger
+        private readonly AuditLogger $auditLogger,
+        private readonly TaskTextEnhancer $taskTextEnhancer
     ) {
     }
 
@@ -54,7 +57,6 @@ final class TaskController extends AbstractController
     public function list(Request $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $user = $this->requireUser($currentUser);
-        $restrictScope = !$this->permissionRegistry->has($user, PermissionEnum::CAN_READ_ALL_TASKS->value);
 
         [$offset, $limit, $sortBy, $direction] = $this->resolvePagination($request, ['created_at', 'due_date', 'priority', 'status', 'title']);
 
@@ -69,11 +71,60 @@ final class TaskController extends AbstractController
             'q' => $request->query->get('q'),
         ];
 
-        $result = $this->taskQueryService->list($user, $filters, $restrictScope, $offset, $limit, $sortBy, $direction);
+        if ($this->permissionRegistry->has($user, PermissionEnum::CAN_READ_ALL_TASKS->value)) {
+            $result = $this->taskQueryService->listForTeamLead($user, $filters, $offset, $limit, $sortBy, $direction);
+        } else {
+            $result = $this->taskQueryService->list($user, $filters, true, $offset, $limit, $sortBy, $direction);
+        }
 
         $items = array_map(fn(Task $task) => $this->taskSummaryViewFactory->make($task), $result['items']);
 
         return $this->responseFactory->collection($items, $result['total'], $offset, $limit, $sortBy, strtoupper($direction));
+    }
+
+    #[Route('/lead/list', name: 'api_task_lead_list', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function leadList(Request $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $user = $this->requireUser($currentUser);
+        if (!$this->permissionRegistry->has($user, PermissionEnum::CAN_READ_ALL_TASKS->value)) {
+            throw ApiProblemException::forbidden('Only teamleads can access this task list.');
+        }
+
+        [$offset, $limit, $sortBy, $direction] = $this->resolvePagination($request, ['created_at', 'due_date', 'priority', 'status', 'title']);
+
+        $filters = [
+            'status' => $request->query->get('status'),
+            'priority' => $request->query->get('priority'),
+            'project_id' => $this->optionalUuid($request->query->get('project_id'), 'project_id'),
+            'assigned_to_user_id' => $this->optionalUuid($request->query->get('assigned_to_user_id'), 'assigned_to_user_id'),
+            'created_by_user_id' => $this->optionalUuid($request->query->get('created_by_user_id'), 'created_by_user_id'),
+            'due_date_from' => $this->optionalDate($request->query->get('due_date_from'), 'due_date_from'),
+            'due_date_to' => $this->optionalDate($request->query->get('due_date_to'), 'due_date_to'),
+            'q' => $request->query->get('q'),
+        ];
+
+        $result = $this->taskQueryService->listForTeamLead($user, $filters, $offset, $limit, $sortBy, $direction);
+        $items = array_map(fn(Task $task) => $this->taskSummaryViewFactory->make($task), $result['items']);
+
+        return $this->responseFactory->collection($items, $result['total'], $offset, $limit, $sortBy, strtoupper($direction));
+    }
+
+    #[Route('/dashboard-stats', name: 'api_task_dashboard_stats', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function dashboardStats(#[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $user = $this->requireUser($currentUser);
+
+        $assignedTotal = $this->taskRepository->countAssignedToUser($user);
+        $assignedInProgress = $this->taskRepository->countAssignedToUser($user, 'in_progress');
+        $doneTotal = $this->taskRepository->countDoneForDashboard($user);
+
+        return $this->responseFactory->single([
+            'my_tasks_total' => $assignedTotal,
+            'my_tasks_in_progress' => $assignedInProgress,
+            'my_tasks_done_total' => $doneTotal,
+        ]);
     }
 
     #[Route('/{id}', name: 'api_task_show', methods: ['GET'])]
@@ -113,6 +164,17 @@ final class TaskController extends AbstractController
             [],
             JsonResponse::HTTP_CREATED
         );
+    }
+
+    #[Route('/beautify-text', name: 'api_task_beautify_text', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function beautifyText(BeautifyTaskRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
+    {
+        $this->requireUser($currentUser);
+
+        $suggestion = $this->taskTextEnhancer->improve($request->description, $request->title);
+
+        return $this->responseFactory->single(['suggestion' => $suggestion]);
     }
 
     #[Route('/{id}', name: 'api_task_update', methods: ['PATCH'])]
@@ -162,7 +224,7 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}/assign-users', name: 'api_task_assign_users', methods: ['POST'])]
-    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function assignUsers(string $id, AssignUsersRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
@@ -173,7 +235,7 @@ final class TaskController extends AbstractController
             $previousAssignees[] = $user->getId()?->toRfc4122();
         }
         
-        $updated = $this->taskService->assignUsers($task, $request->userIds);
+        $updated = $this->taskService->assignUsers($task, $request->userIds, $actor);
 
         $newAssignees = [];
         foreach ($updated->getAssignedUsers() as $user) {
@@ -190,13 +252,13 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}/assign-user', name: 'api_task_assign_user', methods: ['POST'])]
-    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function assignUser(string $id, AssignUserRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $task = $this->findTask($id);
         
-        $updated = $this->taskService->assignUser($task, $request->userId);
+        $updated = $this->taskService->assignUser($task, $request->userId, $actor);
 
         $this->auditLogger->record('task.assign_user', $actor, [
             'task_id' => $task->getId()?->toRfc4122(),
@@ -207,13 +269,13 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}/unassign-user', name: 'api_task_unassign_user', methods: ['POST'])]
-    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function unassignUser(string $id, UnassignUserRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $task = $this->findTask($id);
         
-        $updated = $this->taskService->unassignUser($task, $request->userId);
+        $updated = $this->taskService->unassignUser($task, $request->userId, $actor);
 
         $this->auditLogger->record('task.unassign_user', $actor, [
             'task_id' => $task->getId()?->toRfc4122(),
@@ -224,7 +286,7 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}/clear-assignees', name: 'api_task_clear_assignees', methods: ['POST'])]
-    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_USER->value)]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function clearAssignees(string $id, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
@@ -235,7 +297,7 @@ final class TaskController extends AbstractController
             $previousAssignees[] = $user->getId()?->toRfc4122();
         }
         
-        $updated = $this->taskService->clearAssignees($task);
+        $updated = $this->taskService->clearAssignees($task, $actor);
 
         $this->auditLogger->record('task.clear_assignees', $actor, [
             'task_id' => $task->getId()?->toRfc4122(),
@@ -246,13 +308,13 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}/move-to-project', name: 'api_task_move_to_project', methods: ['POST'])]
-    #[IsGranted('perm:'.PermissionEnum::CAN_ASSIGN_TASKS_TO_PROJECT->value)]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function moveToProject(string $id, MoveTaskRequest $request, #[CurrentUser] ?UserInterface $currentUser): JsonResponse
     {
         $actor = $this->requireUser($currentUser);
         $task = $this->findTask($id);
         $previousProjectId = $task->getProject()?->getId()?->toRfc4122();
-        $updated = $this->taskService->moveToProject($task, $request->projectId);
+        $updated = $this->taskService->moveToProject($task, $request->projectId, $actor);
 
         $this->auditLogger->record('task.move_to_project', $actor, [
             'task_id' => $task->getId()?->toRfc4122(),
@@ -273,7 +335,7 @@ final class TaskController extends AbstractController
         $this->denyAccessUnlessGranted(TaskVoter::STATUS, $task);
 
         $previousStatus = $task->getStatus();
-        $updated = $this->taskService->changeStatus($task, $request->status);
+        $updated = $this->taskService->changeStatus($task, $request->status, $user);
 
         $this->auditLogger->record('task.status_update', $user, [
             'task_id' => $task->getId()?->toRfc4122(),

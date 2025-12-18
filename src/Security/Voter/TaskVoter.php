@@ -61,10 +61,6 @@ final class TaskVoter extends Voter
 
     private function canView(Task $task, User $user): bool
     {
-        if ($this->permissionRegistry->has($user, PermissionEnum::CAN_READ_ALL_TASKS->value)) {
-            return true;
-        }
-
         if ($this->isOwner($task, $user)) {
             return true;
         }
@@ -79,6 +75,10 @@ final class TaskVoter extends Voter
             if ($projectOwner !== null && $projectOwner->getId()?->equals($user->getId())) {
                 return true;
             }
+
+            if ($this->permissionRegistry->has($user, PermissionEnum::CAN_READ_ALL_TASKS->value) && $project->isTeamLead($user)) {
+                return true;
+            }
         }
 
         return false;
@@ -86,16 +86,21 @@ final class TaskVoter extends Voter
 
     private function canEdit(Task $task, User $user): bool
     {
-        if ($this->permissionRegistry->has($user, PermissionEnum::CAN_EDIT_TASKS->value)) {
-            return true;
-        }
-
         if ($this->isOwner($task, $user)) {
             return true;
         }
 
         if ($this->isAssignee($task, $user)) {
             return true;
+        }
+
+        if ($this->permissionRegistry->has($user, PermissionEnum::CAN_EDIT_TASKS->value)) {
+            $project = $task->getProject();
+            if ($project instanceof Project) {
+                return $project->isTeamLead($user);
+            }
+
+            return $this->isOwner($task, $user);
         }
 
         return false;

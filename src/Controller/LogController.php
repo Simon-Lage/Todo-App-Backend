@@ -11,6 +11,7 @@ use App\Log\Service\LogQueryService;
 use App\Log\Service\LogRetentionService;
 use App\Log\View\LogViewFactory;
 use App\Repository\LogRepository;
+use App\Security\Permission\PermissionEnum;
 use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -32,7 +33,7 @@ final class LogController extends AbstractController
     }
 
     #[Route('/list', name: 'api_logs_list', methods: ['GET'])]
-    #[IsGranted('perm:perm_can_read_user')]
+    #[IsGranted('perm:'.PermissionEnum::CAN_READ_LOGS->value)]
     public function list(Request $request): JsonResponse
     {
         [$offset, $limit, $sortBy, $direction] = $this->resolvePagination($request, ['performed_at', 'action']);
@@ -52,7 +53,7 @@ final class LogController extends AbstractController
     }
 
     #[Route('/{id}', name: 'api_logs_show', methods: ['GET'])]
-    #[IsGranted('perm:perm_can_read_user')]
+    #[IsGranted('perm:'.PermissionEnum::CAN_READ_LOGS->value)]
     public function show(string $id): JsonResponse
     {
         $log = $this->findLog($id);
@@ -61,7 +62,7 @@ final class LogController extends AbstractController
     }
 
     #[Route('/stats', name: 'api_logs_stats', methods: ['GET'])]
-    #[IsGranted('perm:perm_can_read_user')]
+    #[IsGranted('perm:'.PermissionEnum::CAN_READ_LOGS->value)]
     public function stats(): JsonResponse
     {
         $stats = $this->logQueryService->stats();

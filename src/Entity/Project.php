@@ -35,12 +35,27 @@ class Project
     #[ORM\OneToMany(mappedBy: 'project', targetEntity: Image::class)]
     private Collection $images;
 
+    #[ORM\ManyToMany(targetEntity: User::class)]
+    #[ORM\JoinTable(name: 'project_team_leads')]
+    private Collection $teamLeads;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $is_completed = false;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $completed_at = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $completed_by_user = null;
+
     public function __construct()
     {
         $this->id = Uuid::v4();
         $this->created_at = new \DateTimeImmutable();
         $this->tasks = new ArrayCollection();
         $this->images = new ArrayCollection();
+        $this->teamLeads = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -143,6 +158,67 @@ class Project
                 $image->setProject(null);
             }
         }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getTeamLeads(): Collection
+    {
+        return $this->teamLeads;
+    }
+
+    public function addTeamLead(User $user): static
+    {
+        if (!$this->teamLeads->contains($user)) {
+            $this->teamLeads->add($user);
+        }
+
+        return $this;
+    }
+
+    public function removeTeamLead(User $user): static
+    {
+        $this->teamLeads->removeElement($user);
+        return $this;
+    }
+
+    public function isTeamLead(User $user): bool
+    {
+        return $this->teamLeads->contains($user);
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->is_completed;
+    }
+
+    public function setIsCompleted(bool $is_completed): static
+    {
+        $this->is_completed = $is_completed;
+        return $this;
+    }
+
+    public function getCompletedAt(): ?\DateTimeInterface
+    {
+        return $this->completed_at;
+    }
+
+    public function setCompletedAt(?\DateTimeInterface $completed_at): static
+    {
+        $this->completed_at = $completed_at;
+        return $this;
+    }
+
+    public function getCompletedByUser(): ?User
+    {
+        return $this->completed_by_user;
+    }
+
+    public function setCompletedByUser(?User $completed_by_user): static
+    {
+        $this->completed_by_user = $completed_by_user;
         return $this;
     }
 }
