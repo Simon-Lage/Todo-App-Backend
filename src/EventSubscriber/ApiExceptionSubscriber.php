@@ -20,7 +20,7 @@ use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 
-#[AsEventListener(event: KernelEvents::EXCEPTION)]
+#[AsEventListener(event: KernelEvents::EXCEPTION, priority: -128)]
 final class ApiExceptionSubscriber
 {
     public function __construct(private readonly ProblemResponseFactory $problemResponseFactory, private readonly LoggerInterface $logger, private readonly bool $debug)
@@ -32,16 +32,31 @@ final class ApiExceptionSubscriber
         $throwable = $event->getThrowable();
 
         if ($throwable instanceof ApiProblemException) {
+            if ($this->debug || $throwable->getStatusCode() >= 500) {
+                $this->logger->error('API Exception', [
+                    'status' => $throwable->getStatusCode(),
+                    'title' => $throwable->getTitle(),
+                    'detail' => $throwable->getDetail(),
+                    'code' => $throwable->getProblemCode(),
+                    'exception' => $throwable,
+                ]);
+            }
             $event->setResponse($this->problemResponseFactory->create($throwable));
             return;
         }
 
         if ($throwable instanceof ValidationFailedException) {
+            if ($this->debug) {
+                $this->logger->warning('Validation failed', ['exception' => $throwable]);
+            }
             $event->setResponse($this->problemResponseFactory->create(ApiProblemException::validation($this->formatViolations($throwable->getViolations()))));
             return;
         }
 
         if ($throwable instanceof AuthenticationException) {
+            if ($this->debug) {
+                $this->logger->warning('Authentication failed', ['exception' => $throwable]);
+            }
             $event->setResponse($this->problemResponseFactory->create(ApiProblemException::unauthorized('Authentication failed.')));
             return;
         }
@@ -66,9 +81,19 @@ final class ApiExceptionSubscriber
             return;
         }
 
-        $this->logger->error('Unhandled exception', ['exception' => $throwable]);
+        $this->logger->error('Unhandled exception', [
+            'exception' => $throwable,
+            'message' => $throwable->getMessage(),
+            'file' => $throwable->getFile(),
+            'line' => $throwable->getLine(),
+            'trace' => $throwable->getTraceAsString(),
+        ]);
 
-        $event->setResponse($this->problemResponseFactory->create(ApiProblemException::internal($this->debug ? $throwable->getMessage() : 'An unexpected error occurred.')));
+        $detail = $this->debug 
+            ? sprintf('%s in %s:%d', $throwable->getMessage(), $throwable->getFile(), $throwable->getLine())
+            : 'An unexpected error occurred.';
+        
+        $event->setResponse($this->problemResponseFactory->create(ApiProblemException::internal($detail)));
     }
 
     private function formatViolations(iterable $violations): array

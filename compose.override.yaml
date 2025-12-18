@@ -19,6 +19,7 @@ services:
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
       APP_ENV: "${APP_ENV:-dev}"
+      APP_DEBUG: "${APP_DEBUG:-1}"
       JWT_PASSPHRASE: "${JWT_PASSPHRASE:-}"
       JWT_ACCESS_TTL: "${JWT_ACCESS_TTL:-3600}"
       JWT_REFRESH_TTL: "${JWT_REFRESH_TTL:-2592000}"

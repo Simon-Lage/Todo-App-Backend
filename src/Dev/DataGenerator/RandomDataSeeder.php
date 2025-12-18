@@ -67,38 +67,78 @@ final class RandomDataSeeder
         'Zimmermann', 'Schmitt', 'Hartmann', 'Lange', 'Schmitz', 'Krüger', 'Meier', 'Lehmann', 'Köhler', 'Herrmann',
     ];
 
-    private const PROJECT_PREFIXES = [
-        'Digitale', 'Neue', 'Innovative', 'Moderne', 'Zentrale', 'Erweiterte', 'Optimierte', 'Integrierte', 'Mobile', 'Cloud',
-        'Smart', 'Agile', 'Nachhaltige', 'Zukunfts', 'Kunden', 'Service', 'Mitarbeiter', 'Prozess', 'Daten', 'Qualitäts',
-        'Sicherheits', 'Produktions', 'Marketing', 'Vertriebs', 'HR', 'Finance', 'Support', 'Innovations', 'Strategie', 'Entwicklungs',
+    private const PROJECT_NAMES = [
+        'Website-Relaunch', 'Kundenportal', 'Mobile App iOS', 'Mobile App Android', 'CRM-System', 'ERP-Integration',
+        'E-Commerce-Plattform', 'Dashboard für Management', 'Reporting-Tool', 'API-Modernisierung',
+        'Datenbank-Migration', 'Cloud-Umzug', 'Sicherheits-Audit', 'Performance-Optimierung', 'CI/CD-Pipeline',
+        'Dokumentations-System', 'Ticketing-System', 'Zeiterfassung', 'Rechnungsstellung', 'Lagerverwaltung',
+        'Produktkatalog', 'Newsletter-System', 'Blog-Plattform', 'Forum-Integration', 'Chat-System',
+        'Video-Konferenz-Tool', 'Datei-Sharing', 'Projektmanagement-Tool', 'Kalender-System', 'Kontaktverwaltung',
     ];
 
-    private const PROJECT_SUFFIXES = [
-        'Portal', 'Plattform', 'System', 'Hub', 'Center', 'Tool', 'Suite', 'Manager', 'Dashboard', 'Cockpit',
-        'Framework', 'Lösung', 'Anwendung', 'Interface', 'Modul', 'Engine', 'Service', 'Gateway', 'Workspace', 'Studio',
-        'Zentrum', 'Planer', 'Organizer', 'Assistent', 'Navigator', 'Controller', 'Monitor', 'Analyzer', 'Optimizer', 'Builder',
+    private const COMPANY_NAMES = [
+        'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann',
+        'Koch', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Braun', 'Werner', 'Schwarz', 'Hofmann',
+        'Zimmermann', 'Schmitt', 'Hartmann', 'Lange', 'Schmitz', 'Krüger', 'Meier', 'Lehmann', 'Köhler', 'Herrmann',
+        'Bauer', 'Huber', 'König', 'Schäfer', 'Krause', 'Ludwig', 'Stein', 'Schuster', 'Friedrich', 'Ziegler',
+        'Brandt', 'Jung', 'Kuhn', 'Peters', 'Bergmann', 'Scholz', 'Franke', 'Hahn', 'Lang', 'Günther',
     ];
 
-    private const TASK_TITLES = [
-        'Projektbeschreibung erstellen', 'User Stories ausarbeiten', 'Backlog verfeinern', 'Authentifizierung implementieren',
-        'Datenbankschema entwerfen', 'API-Verträge prüfen', 'Integrationstests schreiben', 'UI-Texte optimieren',
-        'Abstimmung mit Stakeholdern', 'Deployment-Pipeline planen', 'Monitoring konfigurieren', 'Randfälle dokumentieren',
-        'Kundenfeedback analysieren', 'Bugfixes priorisieren', 'Demo-Umgebung einrichten', 'Coding-Richtlinien aktualisieren',
-        'Exploratives Testen durchführen', 'Feature-Toggle evaluieren', 'Legacy-Modul refaktorieren', 'Zugriffsrechte prüfen',
-        'Onboarding-Checkliste erstellen', 'Sicherheitskonzept überprüfen', 'Datenbankabfragen optimieren', 'Release-Notes koordinieren',
+    private const TASK_SUFFIXES = [
+        'Shop', 'Website', 'App', 'Portal', 'Plattform', 'System', 'Tool', 'Lösung', 'Anwendung', 'Service',
     ];
 
-    private const TASK_NOTES = [
-        'Fokus auf schlanke und performante Lösung legen.',
-        'Abstimmung mit QA vor Freigabe sicherstellen.',
-        'Produktmarketing frühzeitig in den Launch einbinden.',
-        'Kompatibilität mit Mobile-Client vor Abschluss prüfen.',
-        'Änderungen hinter Feature-Flag absichern für sicheres Rollout.',
-        'Schnelles Feedback von mindestens zwei Pilot-Teams einholen.',
-        'Annahmen zu Drittanbieter-Integrationen dokumentieren.',
-        'Potenzielle Blocker für das nächste Meeting hervorheben.',
-        'Pair-Programming nutzen, um Validierung zu beschleunigen.',
-        'Erkenntnisse in die gemeinsame Wissensdatenbank eintragen.',
+    private const TASK_DESCRIPTIONS = [
+        'Modernisierung der bestehenden Lösung mit Fokus auf Benutzerfreundlichkeit und Performance.',
+        'Neue Funktionen zur Verbesserung der Kundeninteraktion und -zufriedenheit implementieren.',
+        'Mobile Optimierung für bessere Darstellung auf Smartphones und Tablets.',
+        'Integration mit bestehenden Systemen für nahtlosen Datenfluss sicherstellen.',
+        'Design-Überarbeitung für moderneres und ansprechenderes Aussehen.',
+        'Sicherheitsverbesserungen zur Absicherung sensibler Daten.',
+        'Performance-Optimierung für schnellere Ladezeiten und bessere Reaktionszeiten.',
+        'Erweiterte Suchfunktionen für bessere Auffindbarkeit von Inhalten.',
+        'Benachrichtigungssystem für wichtige Updates und Änderungen.',
+        'Export-Funktionen für Datenanalyse und Reporting.',
+        'Berechtigungssystem zur Kontrolle des Zugriffs auf verschiedene Bereiche.',
+        'Backup-System für regelmäßige Datensicherung einrichten.',
+        'Monitoring und Logging für besseres Fehler-Tracking.',
+        'API-Erweiterung für Integration mit externen Systemen.',
+        'Test-Automatisierung für zuverlässigere Qualitätssicherung.',
+        'Dokumentation für Entwickler und Endbenutzer erstellen.',
+        'Onboarding-Prozess für neue Benutzer optimieren.',
+        'Feedback-System für kontinuierliche Verbesserung.',
+        'Mehrsprachigkeit für internationale Nutzung.',
+        'Barrierefreiheit für inklusive Nutzung sicherstellen.',
+        'Responsive Design für alle Bildschirmgrößen optimieren.',
+        'Caching-Strategie für bessere Performance implementieren.',
+        'Datenvalidierung zur Sicherstellung der Datenqualität.',
+        'Fehlerbehandlung für robustere Anwendung.',
+        'Analytics-Integration für Nutzungsstatistiken.',
+        'Social-Media-Integration für erweiterte Reichweite.',
+        'Zahlungssystem-Integration für E-Commerce-Funktionen.',
+        'Warenkorb-Funktionalität für Online-Shop.',
+        'Kundenkonto-Verwaltung für personalisierte Erfahrung.',
+        'Bestellverfolgung für Transparenz im Bestellprozess.',
+        'Produktkatalog-Verwaltung für einfache Aktualisierung.',
+        'Bewertungssystem für Kundenfeedback.',
+        'Newsletter-System für Marketing-Kommunikation.',
+        'Chat-Support für direkten Kundenservice.',
+        'FAQ-Bereich für häufige Fragen.',
+        'Blog-Integration für Content-Marketing.',
+        'Event-Management für Veranstaltungen und Termine.',
+        'Kalender-Integration für Terminplanung.',
+        'Datei-Upload für Dokumentenverwaltung.',
+        'Bildergalerie für visuelle Präsentation.',
+        'Video-Integration für multimediale Inhalte.',
+        'Forum-Funktionalität für Community-Interaktion.',
+        'Kommentar-System für Diskussionen.',
+        'Tag-System für bessere Kategorisierung.',
+        'Filter-Optionen für präzise Suche.',
+        'Sortierung für übersichtliche Darstellung.',
+        'Pagination für große Datenmengen.',
+        'Favoriten-Funktion für persönliche Sammlung.',
+        'Wunschliste für spätere Betrachtung.',
+        'Vergleichsfunktion für Produktvergleiche.',
     ];
 
     private const STATUSES = ['open', 'in_progress', 'review', 'done', 'cancelled'];
@@ -315,10 +355,13 @@ final class RandomDataSeeder
         $imageCount = 0;
 
         $projectTaskAllocations = $this->buildTaskAllocation(count: 100);
+        $usedProjectNames = [];
 
         foreach ($projectTaskAllocations as $index => $taskTotal) {
             $project = new Project();
-            $project->setName($this->generateProjectName($index));
+            $projectName = $this->generateUniqueProjectName($index, $usedProjectNames);
+            $usedProjectNames[] = $projectName;
+            $project->setName($projectName);
             $project->setDescription($this->randomProjectDescription());
 
             $creatorPool = $usersByRole['teamlead'];
@@ -409,7 +452,7 @@ final class RandomDataSeeder
             $task = new Task();
             $task->setProject($project);
             $task->setTitle($this->generateTaskTitle($project->getName(), $i));
-            $task->setDescription($this->maybePick(self::TASK_NOTES));
+            $task->setDescription($this->pickRandom(self::TASK_DESCRIPTIONS));
             $task->setStatus($this->pickRandom(self::STATUSES));
             $task->setPriority($this->pickRandom(self::PRIORITIES));
 
@@ -479,7 +522,7 @@ final class RandomDataSeeder
      */
     private function createTasksWithoutProject(array $teamleads, array $staffAssignees): array
     {
-        $taskTotal = 30;
+        $taskTotal = 100;
         $created = 0;
         $imageCount = 0;
 
@@ -487,8 +530,10 @@ final class RandomDataSeeder
             $creator = $this->pickRandom($teamleads);
 
             $task = new Task();
-            $task->setTitle(sprintf('Interne Aufgabe – %s #%d', $this->pickRandom(self::TASK_TITLES), $i + 1));
-            $task->setDescription($this->maybePick(self::TASK_NOTES));
+            $company = $this->pickRandom(self::COMPANY_NAMES);
+            $suffix = $this->pickRandom(self::TASK_SUFFIXES);
+            $task->setTitle(sprintf('%s %s', $company, $suffix));
+            $task->setDescription($this->pickRandom(self::TASK_DESCRIPTIONS));
             $task->setStatus($this->pickRandom(self::STATUSES));
             $task->setPriority($this->pickRandom(self::PRIORITIES));
 
@@ -531,9 +576,9 @@ final class RandomDataSeeder
 
     private function buildTaskAllocation(int $count): array
     {
-        $allocations = [0, 50];
-        for ($i = 2; $i < $count; $i++) {
-            $allocations[] = random_int(0, 50);
+        $allocations = [];
+        for ($i = 0; $i < $count; $i++) {
+            $allocations[] = random_int(5, 30);
         }
         shuffle($allocations);
 
@@ -561,24 +606,57 @@ final class RandomDataSeeder
 
     private function generateProjectName(int $index): string
     {
-        $prefix = $this->pickRandom(self::PROJECT_PREFIXES);
-        $suffix = $this->pickRandom(self::PROJECT_SUFFIXES);
-        return sprintf('%s %s %03d', $prefix, $suffix, $index + 1);
+        $baseName = $this->pickRandom(self::PROJECT_NAMES);
+        return sprintf('%s %03d', $baseName, $index + 1);
+    }
+
+    private function generateUniqueProjectName(int $index, array $usedNames): string
+    {
+        $baseName = $this->pickRandom(self::PROJECT_NAMES);
+        $name = sprintf('%s %03d', $baseName, $index + 1);
+        
+        $attempts = 0;
+        while (in_array($name, $usedNames, true) && $attempts < 100) {
+            $baseName = $this->pickRandom(self::PROJECT_NAMES);
+            $name = sprintf('%s %03d', $baseName, $index + 1);
+            $attempts++;
+        }
+        
+        return $name;
     }
 
     private function randomProjectDescription(): string
     {
         $snippets = [
-            'Fokussiert auf die Verbesserung der operativen Effizienz über alle Teams hinweg.',
-            'Zielt auf eine bessere Onboarding-Erfahrung für neue Kunden ab.',
-            'Konsolidiert Legacy-Tools in einen einheitlichen Workflow.',
-            'Erkundet Automatisierungsmöglichkeiten zur Reduzierung manueller Aufwände.',
-            'Schafft die Grundlage für kommende Mobile-App-Entwicklungen.',
-            'Schafft Alignment zwischen Design, Produkt und Engineering.',
-            'Liefert Insights-Dashboards wie von der Geschäftsleitung gefordert.',
-            'Evaluiert eine neue Integration für Enterprise-Kunden.',
-            'Härtet zentrale Authentifizierungspfade für externe Audits.',
-            'Führt optimierte Kollaborationsrituale für Teams ein.',
+            'Modernisierung der bestehenden Lösung mit Fokus auf Benutzerfreundlichkeit.',
+            'Neue Plattform zur Verbesserung der Kundeninteraktion und -zufriedenheit.',
+            'Mobile Anwendung für iOS und Android zur Erreichbarkeit unterwegs.',
+            'Zentrales System zur Verwaltung von Kundenbeziehungen und Kontakten.',
+            'Integration bestehender Systeme für einen nahtlosen Datenfluss.',
+            'Online-Shop mit modernem Design und verbesserter Checkout-Erfahrung.',
+            'Dashboard zur Visualisierung von Geschäftskennzahlen und Metriken.',
+            'Reporting-Tool für detaillierte Analysen und Auswertungen.',
+            'Modernisierung der API-Architektur für bessere Performance.',
+            'Migration der Datenbank auf eine modernere und skalierbare Lösung.',
+            'Umzug der Infrastruktur in die Cloud für mehr Flexibilität.',
+            'Sicherheitsüberprüfung und Implementierung von Best Practices.',
+            'Optimierung der Anwendungsperformance für schnellere Ladezeiten.',
+            'Automatisierung von Build- und Deployment-Prozessen.',
+            'Zentrales System zur Verwaltung von Projektdokumentation.',
+            'Ticketing-System für effizientes Kunden-Support-Management.',
+            'Digitale Zeiterfassung für Mitarbeiter und Projekte.',
+            'Automatisiertes System zur Rechnungserstellung und -versendung.',
+            'Verwaltungssystem für Lagerbestände und Inventar.',
+            'Produktkatalog mit erweiterten Such- und Filterfunktionen.',
+            'Newsletter-System für Marketing-Kampagnen.',
+            'Blog-Plattform für Content-Management.',
+            'Forum-Integration für Community-Interaktion.',
+            'Chat-System für interne und externe Kommunikation.',
+            'Video-Konferenz-Tool für Remote-Meetings.',
+            'Datei-Sharing-Plattform für Team-Kollaboration.',
+            'Projektmanagement-Tool für Aufgaben- und Ressourcenplanung.',
+            'Kalender-System für Terminverwaltung.',
+            'Kontaktverwaltung für CRM-Integration.',
         ];
 
         return $this->pickRandom($snippets);
@@ -586,8 +664,9 @@ final class RandomDataSeeder
 
     private function generateTaskTitle(string $projectName, int $index): string
     {
-        $base = $this->pickRandom(self::TASK_TITLES);
-        return sprintf('%s – %s #%d', $projectName, $base, $index + 1);
+        $company = $this->pickRandom(self::COMPANY_NAMES);
+        $suffix = $this->pickRandom(self::TASK_SUFFIXES);
+        return sprintf('%s %s', $company, $suffix);
     }
 
     private function randomPastDate(int $maxDays): \DateTimeImmutable

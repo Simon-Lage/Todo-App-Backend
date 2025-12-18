@@ -53,30 +53,37 @@ final class AuthController extends AbstractController
     #[Route('/login', name: 'api_auth_login', methods: ['POST'])]
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = $this->userRepository->findOneBy(['email' => strtolower($request->email)]);
+        try {
+            $user = $this->userRepository->findOneBy(['email' => strtolower($request->email)]);
 
-        if (!$user instanceof User) {
-            throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
+            if (!$user instanceof User) {
+                throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
+            }
+
+            if (!$user->isActive()) {
+                throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
+            }
+
+            if (!$this->passwordHasher->isPasswordValid($user, $request->password)) {
+                throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
+            }
+
+            $user->setLastLoginAt(new \DateTime());
+            $this->entityManager->flush();
+
+            $tokens = $this->authTokenService->issue($user);
+
+            return $this->responseFactory->single([
+                'tokens' => $tokens->toArray(),
+                'user' => $this->userViewFactory->make($user),
+                'permissions' => $this->permissionRegistry->resolve($user),
+            ]);
+        } catch (\Throwable $e) {
+            if ($e instanceof ApiProblemException) {
+                throw $e;
+            }
+            throw ApiProblemException::internal(sprintf('Login failed: %s in %s:%d', $e->getMessage(), $e->getFile(), $e->getLine()));
         }
-
-        if (!$user->isActive()) {
-            throw ApiProblemException::fromStatus(403, 'Forbidden', 'Account is inactive.', 'USED_ACCOUNT_IS_INACTIVE');
-        }
-
-        if (!$this->passwordHasher->isPasswordValid($user, $request->password)) {
-            throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
-        }
-
-        $user->setLastLoginAt(new \DateTime());
-        $this->entityManager->flush();
-
-        $tokens = $this->authTokenService->issue($user);
-
-        return $this->responseFactory->single([
-            'tokens' => $tokens->toArray(),
-            'user' => $this->userViewFactory->make($user),
-            'permissions' => $this->permissionRegistry->resolve($user),
-        ]);
     }
 
     #[Route('/refresh', name: 'api_auth_refresh', methods: ['POST'])]
