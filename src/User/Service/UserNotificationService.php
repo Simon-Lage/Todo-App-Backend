@@ -10,7 +10,11 @@ use Symfony\Component\Mime\Email;
 
 final class UserNotificationService
 {
-    public function __construct(private readonly MailerInterface $mailer, private readonly string $passwordResetUrlTemplate)
+    public function __construct(
+        private readonly MailerInterface $mailer,
+        private readonly string $passwordResetUrlTemplate,
+        private readonly string $fromAddress,
+    )
     {
     }
 
@@ -21,9 +25,10 @@ final class UserNotificationService
         }
 
         $email = (new Email())
+            ->from($this->fromAddress)
             ->to($user->getEmail())
-            ->subject('Temporary password')
-            ->text(sprintf('Hello %s,%sYour temporary password is: %s', $user->getName(), PHP_EOL.PHP_EOL, $plainPassword));
+            ->subject('Temporäres Passwort')
+            ->text(sprintf('Hallo %s,%sIhr temporäres Passwort lautet: %s', $user->getName(), PHP_EOL.PHP_EOL, $plainPassword));
 
         $this->mailer->send($email);
     }
@@ -36,9 +41,10 @@ final class UserNotificationService
 
         $resetUrl = sprintf($this->passwordResetUrlTemplate, urlencode($token));
         $email = (new Email())
+            ->from($this->fromAddress)
             ->to($user->getEmail())
-            ->subject('Password reset request')
-            ->text(sprintf('Hello %s,%sUse the following link to reset your password: %s', $user->getName(), PHP_EOL.PHP_EOL, $resetUrl));
+            ->subject('Passwort zurücksetzen')
+            ->text(sprintf('Hallo %s,%sBitte nutzen Sie folgenden Link, um Ihr Passwort zurückzusetzen:%s%s', $user->getName(), PHP_EOL.PHP_EOL, PHP_EOL, $resetUrl));
 
         $this->mailer->send($email);
     }

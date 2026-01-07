@@ -29,7 +29,8 @@ final class PasswordResetTokenRepository extends ServiceEntityRepository
 
     public function deleteAllForUser(User $user): void
     {
-        $this->_em->createQueryBuilder()
+        $this->getEntityManager()
+            ->createQueryBuilder()
             ->delete(PasswordResetToken::class, 'prt')
             ->where('prt.user = :user')
             ->setParameter('user', $user)

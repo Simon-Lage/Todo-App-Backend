@@ -57,7 +57,7 @@ final class AuthController extends AbstractController
             $user = $this->userRepository->findOneBy(['email' => strtolower($request->email)]);
 
             if (!$user instanceof User) {
-                throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
+                throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'WRONG_LOGIN_DATA');
             }
 
             if (!$user->isActive()) {
@@ -65,7 +65,7 @@ final class AuthController extends AbstractController
             }
 
             if (!$this->passwordHasher->isPasswordValid($user, $request->password)) {
-                throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'TOKEN_INVALID');
+                throw ApiProblemException::fromStatus(401, 'Unauthorized', 'Invalid credentials.', 'WRONG_LOGIN_DATA');
             }
 
             $user->setLastLoginAt(new \DateTime());

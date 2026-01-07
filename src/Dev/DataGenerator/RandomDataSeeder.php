@@ -354,7 +354,7 @@ final class RandomDataSeeder
         $taskCount = 0;
         $imageCount = 0;
 
-        $projectTaskAllocations = $this->buildTaskAllocation(count: 100);
+        $projectTaskAllocations = $this->buildTaskAllocation(count: 120);
         $usedProjectNames = [];
 
         foreach ($projectTaskAllocations as $index => $taskTotal) {
@@ -409,9 +409,7 @@ final class RandomDataSeeder
             $this->entityManager->persist($project);
             $projects[] = $project;
 
-            if (random_int(0, 100) < 60) {
-                $imageCount += $this->createImagesForProject($project, $creator);
-            }
+            $imageCount += $this->createImagesForProject($project, $creator);
 
             $taskResult = $this->createTasksForProject(
                 $project,
@@ -507,9 +505,7 @@ final class RandomDataSeeder
             $this->entityManager->persist($task);
             $created++;
 
-            if (random_int(0, 100) < 30) {
-                $imageCount += $this->createImagesForTask($task, $creator);
-            }
+            $imageCount += $this->createImagesForTask($task, $creator);
         }
 
         return ['taskCount' => $created, 'imageCount' => $imageCount];
@@ -522,7 +518,7 @@ final class RandomDataSeeder
      */
     private function createTasksWithoutProject(array $teamleads, array $staffAssignees): array
     {
-        $taskTotal = 100;
+        $taskTotal = 150;
         $created = 0;
         $imageCount = 0;
 
@@ -566,9 +562,7 @@ final class RandomDataSeeder
             $this->entityManager->persist($task);
             $created++;
 
-            if (random_int(0, 100) < 20) {
-                $imageCount += $this->createImagesForTask($task, $creator);
-            }
+            $imageCount += $this->createImagesForTask($task, $creator);
         }
 
         return ['taskCount' => $created, 'imageCount' => $imageCount];
@@ -578,7 +572,7 @@ final class RandomDataSeeder
     {
         $allocations = [];
         for ($i = 0; $i < $count; $i++) {
-            $allocations[] = random_int(5, 30);
+            $allocations[] = random_int(10, 40);
         }
         shuffle($allocations);
 
@@ -733,13 +727,12 @@ final class RandomDataSeeder
         $facesDir = $this->projectDir.'/dev-assets/random_faces';
         $imagesDir = $this->projectDir.'/dev-assets/random_images';
 
-        if (is_dir($facesDir)) {
-            $this->facesDirectory = $facesDir;
+        if (!is_dir($facesDir) || !is_dir($imagesDir)) {
+            throw new \RuntimeException('Dev asset directories dev-assets/random_faces and dev-assets/random_images must exist for seeding.');
         }
 
-        if (is_dir($imagesDir)) {
-            $this->imagesDirectory = $imagesDir;
-        }
+        $this->facesDirectory = $facesDir;
+        $this->imagesDirectory = $imagesDir;
     }
 
     private function getRandomFaceImage(): ?string
@@ -823,7 +816,7 @@ final class RandomDataSeeder
 
     private function createImagesForProject(Project $project, User $uploader): int
     {
-        $imageCount = random_int(1, 4);
+        $imageCount = random_int(1, 10);
         $created = 0;
 
         for ($i = 0; $i < $imageCount; $i++) {
@@ -843,7 +836,7 @@ final class RandomDataSeeder
 
     private function createImagesForTask(Task $task, User $uploader): int
     {
-        $imageCount = random_int(1, 3);
+        $imageCount = random_int(1, 4);
         $created = 0;
 
         for ($i = 0; $i < $imageCount; $i++) {

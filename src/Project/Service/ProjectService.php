@@ -85,7 +85,7 @@ final class ProjectService
     {
         $existing = $this->projectRepository->findOneBy(['name' => $name]);
         if ($existing instanceof Project && ($current === null || !$existing->getId()?->equals($current->getId()))) {
-            throw ApiProblemException::conflict('Project name is already in use.');
+            throw ApiProblemException::conflict('Project name already in use.', 'ALREADY_PROJECT_WITH_THIS_NAME');
         }
     }
 }

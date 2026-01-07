@@ -44,6 +44,7 @@ services:
     App\User\Service\UserNotificationService:
         arguments:
             $passwordResetUrlTemplate: '%env(PASSWORD_RESET_URL_TEMPLATE)%'
+            $fromAddress: '%env(MAILER_FROM)%'
 
     App\Ai\Service\GoogleStudioClient:
         lazy: true

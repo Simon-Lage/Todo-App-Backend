@@ -33,6 +33,16 @@ final class TaskService
 
     public function create(User $creator, CreateTaskRequest $request): Task
     {
+        $project = null;
+        if ($request->projectId !== null) {
+            $project = $this->findProject($request->projectId);
+            if (!$project->isTeamLead($creator)) {
+                throw ApiProblemException::forbidden('Nur Projektleitungen dürfen hier Aufgaben erstellen.');
+            }
+        }
+
+        $this->assertTitleIsAvailable($request->title, $project, null);
+
         $task = new Task();
         $task->setTitle($request->title);
         $task->setDescription($request->description);
@@ -52,11 +62,7 @@ final class TaskService
             }
         }
 
-        if ($request->projectId !== null) {
-            $project = $this->findProject($request->projectId);
-            if (!$project->isTeamLead($creator)) {
-                throw ApiProblemException::forbidden('Only a project teamlead can create tasks for this project.');
-            }
+        if ($project !== null) {
             $task->setProject($project);
             $task->setReviewerUser(null);
         } else {
@@ -71,7 +77,10 @@ final class TaskService
 
     public function update(Task $task, UpdateTaskRequest $request): Task
     {
+        $project = $task->getProject();
+
         if ($request->title !== null) {
+            $this->assertTitleIsAvailable($request->title, $project, $task);
             $task->setTitle($request->title);
         }
 
@@ -92,6 +101,13 @@ final class TaskService
         $this->entityManager->flush();
 
         return $task;
+    }
+
+    private function assertTitleIsAvailable(string $title, ?Project $project, ?Task $current = null): void
+    {
+        if ($this->taskRepository->existsWithTitle($project, $title, $current)) {
+            throw ApiProblemException::conflict('Title already in use.', 'ALREADY_TASK_WITH_THIS_NAME');
+        }
     }
 
     public function changeStatus(Task $task, string $status, User $actor): Task

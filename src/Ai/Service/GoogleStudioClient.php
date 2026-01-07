@@ -10,7 +10,7 @@ use JsonException;
 final class GoogleStudioClient
 {
     private const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
-    private const DEFAULT_MODEL = 'gemini-1.5-flash';
+    private const DEFAULT_MODEL = 'models/gemini-2.5-flash';
 
     public function __construct(private readonly string $apiKey, private readonly int $timeoutSeconds = 15)
     {
@@ -66,7 +66,7 @@ final class GoogleStudioClient
             ],
         ]);
 
-        $url = sprintf('%s/models/%s:generateContent', self::BASE_URL, rawurlencode($model));
+        $url = sprintf('%s/%s:generateContent', self::BASE_URL, $model);
         $errorMessage = null;
         set_error_handler(static function (int $severity, string $message) use (&$errorMessage): bool {
             $errorMessage = $message;

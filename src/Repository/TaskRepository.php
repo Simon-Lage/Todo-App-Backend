@@ -7,12 +7,37 @@ use App\Entity\Task;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 
 class TaskRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Task::class);
+    }
+
+    public function existsWithTitle(?Project $project, string $title, ?Task $exclude = null): bool
+    {
+        // Uniqueness only enforced within a project; tasks without project can share titles.
+        if ($project === null) {
+            return false;
+        }
+
+        $qb = $this->createQueryBuilder('t')
+            ->select('t.id')
+            ->andWhere('LOWER(t.title) = :title')
+            ->andWhere('t.project = :project')
+            ->setParameter('title', mb_strtolower($title, 'UTF-8'))
+            ->setParameter('project', $project)
+            ->setMaxResults(1);
+
+        if ($exclude instanceof Task && $exclude->getId() !== null) {
+            $qb->andWhere('t.id != :excludeId')->setParameter('excludeId', $exclude->getId()->toRfc4122());
+        }
+
+        $result = $qb->getQuery()->getOneOrNullResult();
+        return $result !== null;
     }
 
     /**
