@@ -8,7 +8,7 @@ Diese 4 Test-Benutzer werden **immer** mit denselben Daten erstellt:
 - **E-Mail:** `admin@changeit.test`
 - **Passwort:** `123`
 - **Rolle:** Admin
-- **Berechtigungen:** ALLE (User, Rollen, Tasks, Projekte - vollständige CRUD)
+- **Berechtigungen:** Benutzer/Rollen/Logs (kein Zugriff auf Tasks/Projekte)
 
 ### 🟡 **Abteilungsleiter (Teamlead) #1**
 - **E-Mail:** `teamlead@changeit.test`
@@ -39,7 +39,7 @@ Diese 4 Test-Benutzer werden **immer** mit denselben Daten erstellt:
 - **Passwort:** `123`
 - **Rolle:** Staff
 - **Berechtigungen:**
-  - ✅ Tasks bearbeiten (nur eigene)
+- ✅ Tasks bearbeiten (nur eigene/zugewiesene, Status ändern)
   - ✅ Projekte lesen
   - ❌ Keine Tasks erstellen
   - ❌ Keine Projekte erstellen
@@ -86,5 +86,5 @@ docker compose exec php bin/console app:test:create-user
 
 - **E-Mail:** `admin@changeit.de`
 - **Passwort:** `password123`
-- **Rolle:** Administrator (alle Berechtigungen)
+- **Rolle:** Admin (Benutzer/Rollen/Logs, keine Tasks/Projekte)
 

@@ -1,5 +1,3 @@
-The Frontend is under ../Todo-App-Frontend
-
 # Repository Guidelines
 
 ## Project Structure & Module Organization
