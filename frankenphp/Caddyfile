@@ -47,13 +47,6 @@
 
 	{$CADDY_SERVER_EXTRA_DIRECTIVES}
 
-	header Access-Control-Allow-Origin "*"
-	header Access-Control-Allow-Methods "GET, OPTIONS, POST, PUT, PATCH, DELETE"
-	header Access-Control-Allow-Headers "Content-Type, Authorization"
-
-	@preflight method OPTIONS
-	respond @preflight 204
-
 	# Disable Topics tracking if not enabled explicitly: https://github.com/jkarlin/topics
 	header ?Permissions-Policy "browsing-topics=()"
 
