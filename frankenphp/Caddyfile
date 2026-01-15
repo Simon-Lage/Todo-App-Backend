@@ -52,20 +52,6 @@
 	header ?Permissions-Policy "browsing-topics=()"
 
 	route {
-		@cors_preflight {
-			method OPTIONS
-		}
-
-		header {
-			Access-Control-Allow-Origin "*"
-			Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-			Access-Control-Allow-Headers "Content-Type, Authorization"
-			Access-Control-Expose-Headers "Link"
-			Access-Control-Max-Age "86400"
-		}
-
-		respond @cors_preflight "" 204
-
 		@api {
 			path /api/*
 		}
