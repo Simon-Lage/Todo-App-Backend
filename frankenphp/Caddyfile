@@ -69,8 +69,10 @@
 		@api {
 			path /api/*
 		}
-		rewrite @api /index.php
-		php @api
+		handle @api {
+			rewrite * /index.php
+			php
+		}
 
 		@phpRoute {
 			not path /.well-known/mercure*
