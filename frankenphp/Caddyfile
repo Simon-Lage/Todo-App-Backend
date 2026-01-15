@@ -50,6 +50,14 @@
 	# Disable Topics tracking if not enabled explicitly: https://github.com/jkarlin/topics
 	header ?Permissions-Policy "browsing-topics=()"
 
+	@api {
+		path /api/*
+	}
+	handle @api {
+		rewrite * /index.php
+		php
+	}
+
 	@phpRoute {
 		not path /.well-known/mercure*
 		not file {path}
