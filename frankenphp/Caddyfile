@@ -2,6 +2,7 @@
 	skip_install_trust
 
 	{$CADDY_GLOBAL_OPTIONS}
+	auto_https off
 
 	frankenphp {
 		{$FRANKENPHP_CONFIG}
@@ -16,7 +17,7 @@
 
 {$CADDY_EXTRA_CONFIG}
 
-{$SERVER_NAME:localhost} {
+:80 {
 	log {
 		{$CADDY_SERVER_LOG_OPTIONS}
 		# Redact the authorization query parameter that can be set by Mercure
@@ -50,40 +51,39 @@
 	# Disable Topics tracking if not enabled explicitly: https://github.com/jkarlin/topics
 	header ?Permissions-Policy "browsing-topics=()"
 
-	@cors_preflight {
-		method OPTIONS
-		path /api/*
-	}
-	handle @cors_preflight {
-		header Access-Control-Allow-Origin "*"
-		header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-		header Access-Control-Allow-Headers "Content-Type, Authorization"
-		header Access-Control-Max-Age "86400"
-		respond "" 204
-	}
+	route {
+		@cors_preflight {
+			method OPTIONS
+		}
 
-	@api {
-		path /api/*
-	}
-	handle @api {
-		header Access-Control-Allow-Origin "*"
-		header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-		header Access-Control-Allow-Headers "Content-Type, Authorization"
-		header Access-Control-Expose-Headers "Link"
-		rewrite * /index.php
-		php
-	}
+		header {
+			Access-Control-Allow-Origin "*"
+			Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+			Access-Control-Allow-Headers "Content-Type, Authorization"
+			Access-Control-Expose-Headers "Link"
+			Access-Control-Max-Age "86400"
+		}
 
-	@phpRoute {
-		not path /.well-known/mercure*
-		not file {path}
-	}
-	rewrite @phpRoute index.php
+		respond @cors_preflight "" 204
 
-	@frontController path index.php
-	php @frontController
+		@api {
+			path /api/*
+		}
+		rewrite @api /index.php
+		php @api
 
-	file_server {
-		hide *.php
+		@phpRoute {
+			not path /.well-known/mercure*
+			not path /api/*
+			not file {path}
+		}
+		rewrite @phpRoute index.php
+
+		@frontController path index.php
+		php @frontController
+
+		file_server {
+			hide *.php
+		}
 	}
 }

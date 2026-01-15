@@ -13,7 +13,7 @@ services:
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-3600}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-2592000}
       PASSWORD_RESET_TOKEN_TTL: ${PASSWORD_RESET_TOKEN_TTL:-3600}
-      PASSWORD_RESET_URL_TEMPLATE: ${PASSWORD_RESET_URL_TEMPLATE:-http://194.35.120.105:8443/auth/reset-password/confirm?token=%s}
+      PASSWORD_RESET_URL_TEMPLATE: ${PASSWORD_RESET_URL_TEMPLATE:-http://194.35.120.105/auth/reset-password/confirm?token=%s}
       MAILER_DSN: ${MAILER_DSN}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
@@ -23,9 +23,3 @@ services:
       - target: 80
         published: ${HTTP_PORT:-80}
         protocol: tcp
-      - target: 443
-        published: ${HTTPS_PORT:-443}
-        protocol: tcp
-      - target: 443
-        published: ${HTTP3_PORT:-443}
-        protocol: udp

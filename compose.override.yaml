@@ -33,7 +33,7 @@ services:
       HTTP_PORT: "${HTTP_PORT:-8080}"
       HTTPS_PORT: "${HTTPS_PORT:-8443}"
       HTTP3_PORT: "${HTTP3_PORT:-8443}"
-      MERCURE_PUBLIC_URL: "${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-8443}/.well-known/mercure}"
+      MERCURE_PUBLIC_URL: "${MERCURE_PUBLIC_URL:-http://${SERVER_NAME:-localhost}:${HTTP_PORT:-8080}/.well-known/mercure}"
     # Dev-Mode: Überschreibe Ports für Dev-Umgebung
     # Hinweis: Docker Compose kombiniert Ports-Arrays, daher werden beide gemappt
     # Die Dev-Ports (8080/8443) sollten verwendet werden
@@ -41,12 +41,6 @@ services:
       - target: 80
         published: ${HTTP_PORT:-8080}
         protocol: tcp
-      - target: 443
-        published: ${HTTPS_PORT:-8443}
-        protocol: tcp
-      - target: 443
-        published: ${HTTP3_PORT:-8443}
-        protocol: udp
     extra_hosts:
       # Ensure that host.docker.internal is correctly defined on Linux
       - host.docker.internal:host-gateway
