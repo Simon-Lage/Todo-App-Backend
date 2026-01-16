@@ -3,6 +3,8 @@ services:
   php:
     image: ${IMAGES_PREFIX:-}app-php
     restart: unless-stopped
+    env_file:
+      - ./compose.env
     environment:
       SERVER_NAME: ${SERVER_NAME:-localhost}
       CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://localhost(:[0-9]+)?$$}
