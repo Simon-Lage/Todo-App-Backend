@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "eslint-plugin-tailwindcss": "^4.0.0-beta.0"
+  }
+}
