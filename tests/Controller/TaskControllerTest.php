@@ -181,7 +181,7 @@ final class TaskControllerTest extends WebTestCase
         $taskId = $this->createTaskAndGetId();
 
         $this->client->request(
-            'PUT',
+            'PATCH',
             '/api/task/' . $taskId,
             [],
             [],
@@ -207,7 +207,7 @@ final class TaskControllerTest extends WebTestCase
         $taskId = $this->createTaskAndGetId();
 
         $this->client->request(
-            'PATCH',
+            'POST',
             '/api/task/' . $taskId . '/status',
             [],
             [],
@@ -296,4 +296,3 @@ final class TaskControllerTest extends WebTestCase
         return $data['id'] ?? '';
     }
 }
-

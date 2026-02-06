@@ -58,7 +58,7 @@ final class ProjectControllerTest extends WebTestCase
                 'HTTP_AUTHORIZATION' => 'Bearer ' . $this->accessToken,
             ],
             json_encode([
-                'name' => 'Test Project ' . time(),
+                'name' => 'Test Project ' . $this->uniqueSuffix(),
                 'description' => 'This is a test project',
             ])
         );
@@ -116,7 +116,7 @@ final class ProjectControllerTest extends WebTestCase
         $projectId = $this->createProjectAndGetId();
 
         $this->client->request(
-            'PUT',
+            'PATCH',
             '/api/project/' . $projectId,
             [],
             [],
@@ -195,7 +195,7 @@ final class ProjectControllerTest extends WebTestCase
                 'HTTP_AUTHORIZATION' => 'Bearer ' . $this->accessToken,
             ],
             json_encode([
-                'name' => 'Project for testing ' . time(),
+                'name' => 'Project for testing ' . $this->uniqueSuffix(),
                 'description' => 'Test project',
             ])
         );
@@ -203,5 +203,9 @@ final class ProjectControllerTest extends WebTestCase
         $data = json_decode($this->client->getResponse()->getContent(), true);
         return $data['id'] ?? '';
     }
-}
 
+    private function uniqueSuffix(): string
+    {
+        return str_replace('.', '', uniqid('', true));
+    }
+}

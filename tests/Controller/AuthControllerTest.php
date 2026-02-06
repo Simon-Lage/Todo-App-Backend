@@ -103,7 +103,7 @@ final class AuthControllerTest extends WebTestCase
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'refreshToken' => $refreshToken,
+                'refresh_token' => $refreshToken,
             ])
         );
 
@@ -147,7 +147,7 @@ final class AuthControllerTest extends WebTestCase
                 'HTTP_AUTHORIZATION' => 'Bearer ' . $accessToken,
             ],
             json_encode([
-                'refreshToken' => $refreshToken,
+                'refresh_token' => $refreshToken,
             ])
         );
 
@@ -247,4 +247,3 @@ final class AuthControllerTest extends WebTestCase
         return json_decode($this->client->getResponse()->getContent(), true);
     }
 }
-

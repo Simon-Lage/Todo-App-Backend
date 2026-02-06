@@ -57,6 +57,16 @@ final class CreateTestUserCommand extends Command
                 PermissionEnum::CAN_EDIT_ROLES,
                 PermissionEnum::CAN_READ_ROLES,
                 PermissionEnum::CAN_DELETE_ROLES,
+                PermissionEnum::CAN_CREATE_TASKS,
+                PermissionEnum::CAN_EDIT_TASKS,
+                PermissionEnum::CAN_READ_ALL_TASKS,
+                PermissionEnum::CAN_DELETE_TASKS,
+                PermissionEnum::CAN_ASSIGN_TASKS_TO_USER,
+                PermissionEnum::CAN_ASSIGN_TASKS_TO_PROJECT,
+                PermissionEnum::CAN_CREATE_PROJECTS,
+                PermissionEnum::CAN_EDIT_PROJECTS,
+                PermissionEnum::CAN_READ_PROJECTS,
+                PermissionEnum::CAN_DELETE_PROJECTS,
                 PermissionEnum::CAN_READ_LOGS,
             ];
 
@@ -85,4 +95,3 @@ final class CreateTestUserCommand extends Command
         return Command::SUCCESS;
     }
 }
-
