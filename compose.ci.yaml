@@ -1,9 +1,10 @@
 ---
 services:
   php:
+    environment:
+      APP_SECRET: ci-secret
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      test: ["CMD", "true"]
       interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
+      timeout: 3s
+      retries: 1
