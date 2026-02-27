@@ -69,4 +69,6 @@ export MAILER_DSN="smtp://user:pass@smtp.example.com:587"
 
 **Note:** The default `PASSWORD_RESET_URL_TEMPLATE` uses IP address `194.35.120.105` on port `8443`. Adjust if your frontend runs on a different port or if you set up a domain later.
 
+Production deployment is triggered by GitHub Actions on pushes to `main`.
+
 See `.env.example` for a complete template.
