@@ -29,6 +29,8 @@ security:
         api_logout:
             pattern: ^/api/auth/logout
             stateless: true
+            provider: app_user_provider
+            jwt: ~
         main:
             pattern: ^/api
             stateless: true

@@ -32,7 +32,7 @@ final class AuthControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertArrayHasKey('tokens', $data);
         $this->assertArrayHasKey('access_token', $data['tokens']);
@@ -108,7 +108,7 @@ final class AuthControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertArrayHasKey('tokens', $data);
         $this->assertArrayHasKey('access_token', $data['tokens']);
@@ -185,11 +185,10 @@ final class AuthControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
-        $this->assertArrayHasKey('tokens', $data);
-        $this->assertArrayHasKey('access_token', $data['tokens']);
-        $this->assertArrayHasKey('refresh_token', $data['tokens']);
+        $this->assertArrayHasKey('user', $data);
+        $this->assertArrayHasKey('message', $data);
     }
 
     public function testRegisterWithExistingEmail(): void
@@ -244,6 +243,6 @@ final class AuthControllerTest extends WebTestCase
             ])
         );
 
-        return json_decode($this->client->getResponse()->getContent(), true);
+        return json_decode($this->client->getResponse()->getContent(), true)['data'] ?? [];
     }
 }
