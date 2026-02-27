@@ -1,0 +1,79 @@
+---
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: ~
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          if [[ -z "${DEPLOY_HOST}" || -z "${DEPLOY_USER}" ]]; then
+            echo "Missing DEPLOY_HOST or DEPLOY_USER secret"
+            exit 1
+          fi
+
+          port="${DEPLOY_PORT:-22}"
+
+          ssh -i ~/.ssh/id_ed25519 -p "$port" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" <<'EOF_REMOTE'
+          set -Eeuo pipefail
+
+          REPO_DIR="/home/simon/todo-app-backend"
+          BRANCH="main"
+
+          cd "$REPO_DIR"
+
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "Working tree is dirty. Refusing deploy."
+            exit 1
+          fi
+
+          git fetch --quiet origin "$BRANCH"
+          LOCAL_SHA="$(git rev-parse HEAD)"
+          REMOTE_SHA="$(git rev-parse "origin/$BRANCH")"
+
+          if [[ "$LOCAL_SHA" == "$REMOTE_SHA" ]]; then
+            echo "No new commit on $BRANCH."
+            exit 0
+          fi
+
+          git pull --ff-only origin "$BRANCH"
+
+          COMPOSE_ARGS=(-f compose.yaml -f compose.prod.yaml)
+          if [[ -f compose.prod.local.yaml ]]; then
+            COMPOSE_ARGS+=(-f compose.prod.local.yaml)
+          fi
+
+          docker compose "${COMPOSE_ARGS[@]}" up -d --build --wait
+          docker compose "${COMPOSE_ARGS[@]}" exec -T php bin/console doctrine:migrations:migrate --no-interaction
+          EOF_REMOTE

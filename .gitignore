@@ -22,3 +22,4 @@
 
 compose.prod.local.yaml
 compose.prod.env
+local.info.md
