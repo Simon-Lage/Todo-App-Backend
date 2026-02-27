@@ -2,7 +2,11 @@
 name: Deploy Production
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
     branches:
       - main
   workflow_dispatch: ~
@@ -17,6 +21,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy to VPS
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Prepare SSH
@@ -42,7 +47,7 @@ jobs:
 
           port="${DEPLOY_PORT:-22}"
 
-          ssh -i ~/.ssh/id_ed25519 -p "$port" \
+          ssh -T -i ~/.ssh/id_ed25519 -p "$port" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" <<'EOF_REMOTE'
