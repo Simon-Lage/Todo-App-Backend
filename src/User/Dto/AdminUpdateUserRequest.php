@@ -35,4 +35,3 @@ final class AdminUpdateUserRequest implements JsonRequestDto
         return new self($name, $email, $active, $roles);
     }
 }
-
