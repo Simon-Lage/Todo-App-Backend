@@ -51,10 +51,12 @@ jobs:
         run: docker compose run --rm -T --entrypoint '' php composer require --dev friendsofphp/php-cs-fixer --no-interaction --no-progress --no-scripts
       - name: Run PHP CS Fixer
         run: docker compose run --rm -T --entrypoint '' php ./vendor/bin/php-cs-fixer fix --using-cache=no --allow-risky=no
+      - name: Generate JWT keypair for tests
+        run: docker compose run --rm -T --entrypoint '' php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction
       - name: Create test database
         run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php bin/console -e test doctrine:database:create --if-not-exists --no-interaction
-      - name: Create schema
-        run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php bin/console -e test doctrine:schema:create --no-interaction
+      - name: Run test migrations
+        run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php bin/console -e test doctrine:migrations:migrate --no-interaction
       - name: Create test user
         run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php bin/console -e test app:test:create-user --no-interaction
       - name: Run PHPUnit
