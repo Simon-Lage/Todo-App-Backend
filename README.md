@@ -18,6 +18,17 @@ docker compose exec php bin/console app:dev:seed-random-data --purge
 - **Swagger UI**: https://localhost:8443/api/doc
 - **JSON**: https://localhost:8443/api/doc.json
 
+## Production with Central Reverse Proxy
+
+This backend is designed to run behind a central Nginx reverse proxy.
+
+- This app is reachable under `/todo`
+- `/todo` prefix is stripped by the proxy
+- `/` is intentionally not served by this app
+
+Use the dedicated guide:
+- [`docs/reverse-proxy-letsencrypt.md`](docs/reverse-proxy-letsencrypt.md)
+
 ## JWT Authentication
 
 JWT keys are stored in `/var/jwt/` inside the container and persisted via Docker volume.

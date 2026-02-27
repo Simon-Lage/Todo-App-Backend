@@ -1,0 +1,13 @@
+---
+# Attach this app to the shared edge network used by the central reverse proxy.
+services:
+  php:
+    networks:
+      edge:
+        aliases:
+          - todo-backend
+
+networks:
+  edge:
+    external: true
+    name: edge
