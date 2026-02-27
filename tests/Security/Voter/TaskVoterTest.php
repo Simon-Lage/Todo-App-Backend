@@ -101,10 +101,8 @@ final class TaskVoterTest extends TestCase
         $token = $this->createTokenForUser($user);
 
         $this->permissionRegistry
-            ->expects($this->once())
-            ->method('has')
-            ->with($user, PermissionEnum::CAN_READ_ALL_TASKS->value)
-            ->willReturn(false);
+            ->expects($this->never())
+            ->method('has');
 
         $result = $this->voter->vote($token, $task, [TaskVoter::VIEW]);
 
@@ -119,10 +117,8 @@ final class TaskVoterTest extends TestCase
         $token = $this->createTokenForUser($assignee);
 
         $this->permissionRegistry
-            ->expects($this->once())
-            ->method('has')
-            ->with($assignee, PermissionEnum::CAN_READ_ALL_TASKS->value)
-            ->willReturn(false);
+            ->expects($this->never())
+            ->method('has');
 
         $result = $this->voter->vote($token, $task, [TaskVoter::VIEW]);
 
@@ -133,7 +129,15 @@ final class TaskVoterTest extends TestCase
     {
         $owner = $this->createUser();
         $viewer = $this->createUser();
-        $task = $this->createTaskWithOwner($owner);
+        $project = $this->createMock(Project::class);
+        $project->method('getCreatedByUser')->willReturn($owner);
+        $project->method('isTeamLead')->with($viewer)->willReturn(true);
+
+        $task = $this->createMock(Task::class);
+        $task->method('getCreatedByUser')->willReturn($owner);
+        $task->method('isAssignedToUser')->willReturn(false);
+        $task->method('getProject')->willReturn($project);
+
         $token = $this->createTokenForUser($viewer);
 
         $this->permissionRegistry
@@ -154,10 +158,8 @@ final class TaskVoterTest extends TestCase
         $token = $this->createTokenForUser($user);
 
         $this->permissionRegistry
-            ->expects($this->once())
-            ->method('has')
-            ->with($user, PermissionEnum::CAN_EDIT_TASKS->value)
-            ->willReturn(false);
+            ->expects($this->never())
+            ->method('has');
 
         $result = $this->voter->vote($token, $task, [TaskVoter::EDIT]);
 
@@ -172,10 +174,8 @@ final class TaskVoterTest extends TestCase
         $token = $this->createTokenForUser($assignee);
 
         $this->permissionRegistry
-            ->expects($this->once())
-            ->method('has')
-            ->with($assignee, PermissionEnum::CAN_EDIT_TASKS->value)
-            ->willReturn(false);
+            ->expects($this->never())
+            ->method('has');
 
         $result = $this->voter->vote($token, $task, [TaskVoter::EDIT]);
 
@@ -219,7 +219,7 @@ final class TaskVoterTest extends TestCase
     private function createUser(): User
     {
         $user = $this->createMock(User::class);
-        $user->method('getId')->willReturn(new \Symfony\Component\Uid\Uuid('00000000-0000-0000-0000-000000000001'));
+        $user->method('getId')->willReturn(\Symfony\Component\Uid\Uuid::v4());
         return $user;
     }
 
@@ -248,4 +248,3 @@ final class TaskVoterTest extends TestCase
         return $token;
     }
 }
-

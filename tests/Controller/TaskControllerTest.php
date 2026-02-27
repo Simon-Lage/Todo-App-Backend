@@ -108,7 +108,7 @@ final class TaskControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertArrayHasKey('id', $data);
         $this->assertArrayHasKey('title', $data);
@@ -134,7 +134,7 @@ final class TaskControllerTest extends WebTestCase
             ])
         );
 
-        $this->assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
     }
 
     public function testShowTask(): void
@@ -152,7 +152,7 @@ final class TaskControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertArrayHasKey('id', $data);
         $this->assertArrayHasKey('title', $data);
@@ -196,7 +196,7 @@ final class TaskControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertEquals('Updated Task Title', $data['title']);
         $this->assertEquals('high', $data['priority']);
@@ -221,7 +221,7 @@ final class TaskControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertEquals('in_progress', $data['status']);
     }
@@ -270,7 +270,7 @@ final class TaskControllerTest extends WebTestCase
         );
 
         $data = json_decode($this->client->getResponse()->getContent(), true);
-        return $data['tokens']['access_token'] ?? '';
+        return $data['data']['tokens']['access_token'] ?? '';
     }
 
     private function createTaskAndGetId(): string
@@ -293,6 +293,6 @@ final class TaskControllerTest extends WebTestCase
         );
 
         $data = json_decode($this->client->getResponse()->getContent(), true);
-        return $data['id'] ?? '';
+        return $data['data']['id'] ?? '';
     }
 }

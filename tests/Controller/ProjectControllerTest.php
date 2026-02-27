@@ -64,7 +64,7 @@ final class ProjectControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertArrayHasKey('id', $data);
         $this->assertArrayHasKey('name', $data);
@@ -86,7 +86,7 @@ final class ProjectControllerTest extends WebTestCase
             ])
         );
 
-        $this->assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
     }
 
     public function testShowProject(): void
@@ -104,7 +104,7 @@ final class ProjectControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertArrayHasKey('id', $data);
         $this->assertArrayHasKey('name', $data);
@@ -131,7 +131,7 @@ final class ProjectControllerTest extends WebTestCase
         );
 
         $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $data = (json_decode($this->client->getResponse()->getContent(), true)['data'] ?? []);
         
         $this->assertEquals('Updated Project Name', $data['name']);
     }
@@ -180,7 +180,7 @@ final class ProjectControllerTest extends WebTestCase
         );
 
         $data = json_decode($this->client->getResponse()->getContent(), true);
-        return $data['tokens']['access_token'] ?? '';
+        return $data['data']['tokens']['access_token'] ?? '';
     }
 
     private function createProjectAndGetId(): string
@@ -201,7 +201,7 @@ final class ProjectControllerTest extends WebTestCase
         );
 
         $data = json_decode($this->client->getResponse()->getContent(), true);
-        return $data['id'] ?? '';
+        return $data['data']['id'] ?? '';
     }
 
     private function uniqueSuffix(): string
