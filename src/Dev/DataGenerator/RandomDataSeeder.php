@@ -816,7 +816,7 @@ final class RandomDataSeeder
 
     private function createImagesForProject(Project $project, User $uploader): int
     {
-        $imageCount = random_int(1, 10);
+        $imageCount = $this->lowBiasedCount(0, 10);
         $created = 0;
 
         for ($i = 0; $i < $imageCount; $i++) {
@@ -836,7 +836,7 @@ final class RandomDataSeeder
 
     private function createImagesForTask(Task $task, User $uploader): int
     {
-        $imageCount = random_int(1, 4);
+        $imageCount = $this->lowBiasedCount(1, 4);
         $created = 0;
 
         for ($i = 0; $i < $imageCount; $i++) {
@@ -852,5 +852,18 @@ final class RandomDataSeeder
         }
 
         return $created;
+    }
+
+    private function lowBiasedCount(int $min, int $max): int
+    {
+        if ($min >= $max) {
+            return $min;
+        }
+
+        // Pull two uniform values and take the smaller one to make lower counts more likely.
+        $first = random_int($min, $max);
+        $second = random_int($min, $max);
+
+        return min($first, $second);
     }
 }
