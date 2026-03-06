@@ -2,6 +2,8 @@
 name: Deploy Production
 
 on:
+  # - Run after CI on main
+  # - Manual trigger
   workflow_run:
     workflows:
       - CI
@@ -12,18 +14,22 @@ on:
   workflow_dispatch: ~
 
 permissions:
+  # - Read-only repo access
   contents: read
 
 concurrency:
+  # - Serial deploys
   group: production-deploy
   cancel-in-progress: false
 
 jobs:
   deploy:
     name: Deploy to VPS
+    # - CI success or manual
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      # - Prep SSH
       - name: Prepare SSH
         shell: bash
         run: |
@@ -33,6 +39,7 @@ jobs:
           printf '%s\n' "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
+      # - SSH deploy
       - name: Deploy on server
         shell: bash
         env:
@@ -40,17 +47,20 @@ jobs:
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
         run: |
+          # - Required vars
           if [[ -z "${DEPLOY_HOST}" || -z "${DEPLOY_USER}" ]]; then
             echo "Missing DEPLOY_HOST or DEPLOY_USER variable"
             exit 1
           fi
 
+          # - Default port
           port="${DEPLOY_PORT:-22}"
 
           ssh -T -i ~/.ssh/id_ed25519 -p "$port" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" <<'EOF_REMOTE'
+          # - Strict shell options
           set -Eeuo pipefail
 
           REPO_DIR="/home/simon/todo-app-backend"
@@ -58,20 +68,24 @@ jobs:
 
           cd "$REPO_DIR"
 
+          # - Abort on local changes
           if [[ -n "$(git status --porcelain)" ]]; then
             echo "Working tree is dirty. Refusing deploy."
             exit 1
           fi
 
+          # - Compare SHAs
           git fetch --quiet origin "$BRANCH"
           LOCAL_SHA="$(git rev-parse HEAD)"
           REMOTE_SHA="$(git rev-parse "origin/$BRANCH")"
 
+          # - Exit if no new commit
           if [[ "$LOCAL_SHA" == "$REMOTE_SHA" ]]; then
             echo "No new commit on $BRANCH."
             exit 0
           fi
 
+          # - Fast-forward pull
           git pull --ff-only origin "$BRANCH"
 
           COMPOSE_ARGS=(-f compose.yaml -f compose.prod.yaml)
@@ -79,6 +93,7 @@ jobs:
             COMPOSE_ARGS+=(-f compose.prod.local.yaml)
           fi
 
+          # - Build/start, then migrate
           docker compose "${COMPOSE_ARGS[@]}" up -d --build --wait
           docker compose "${COMPOSE_ARGS[@]}" exec -T php bin/console doctrine:migrations:migrate --no-interaction
           EOF_REMOTE

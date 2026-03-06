@@ -2,6 +2,8 @@
 name: CI
 
 on:
+  # - Push to main
+  # - PRs and manual
   push:
     branches:
       - main
@@ -9,9 +11,11 @@ on:
   workflow_dispatch: ~
 
 permissions:
+  # - Read-only repo access
   contents: read
 
 concurrency:
+  # - One run per branch
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
@@ -20,17 +24,23 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     env:
+      # - CI compose files
       COMPOSE_FILE: compose.yaml:compose.override.yaml:compose.ci.yaml
+      # - Test DB DSN
       DATABASE_URL: postgresql://app:app@database:5432/app?serverVersion=16&charset=utf8
     steps:
+      # - Checkout repo
       - name: Checkout code
         uses: actions/checkout@v5
         with:
           persist-credentials: false
+      # - Copy example env
       - name: Prepare compose.env for CI
         run: cp compose.env.example compose.env
+      # - Enable Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      # - Build/cache images
       - name: Build Docker images
         uses: docker/bake-action@v6
         with:
@@ -43,21 +53,30 @@ jobs:
             *.cache-from=type=gha,scope=${{github.ref}}
             *.cache-from=type=gha,scope=refs/heads/main
             *.cache-to=type=gha,scope=${{github.ref}},mode=max
+      # - Start DB + mailer
       - name: Start infrastructure services
         run: docker compose up -d --wait --no-build database mailer
+      # - Install deps
       - name: Install dependencies
         run: docker compose run --rm -T --entrypoint '' php composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      # - Add PHP CS Fixer
       - name: Install PHP CS Fixer
         run: docker compose run --rm -T --entrypoint '' php composer require --dev friendsofphp/php-cs-fixer --no-interaction --no-progress --no-scripts
+      # - Run formatter
       - name: Run PHP CS Fixer
         run: docker compose run --rm -T --entrypoint '' php ./vendor/bin/php-cs-fixer fix --using-cache=no --allow-risky=no
+      # - Generate JWT keys
       - name: Generate JWT keypair for tests
         run: docker compose run --rm -T --entrypoint '' php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction
+      # - Create test DB
       - name: Create test database
         run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php bin/console -e test doctrine:database:create --if-not-exists --no-interaction
+      # - Run migrations
       - name: Run test migrations
         run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php bin/console -e test doctrine:migrations:migrate --no-interaction
+      # - Create test user
       - name: Create test user
         run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php bin/console -e test app:test:create-user --no-interaction
+      # - Run tests
       - name: Run PHPUnit
         run: docker compose run --rm -T --entrypoint '' -e DATABASE_URL="$DATABASE_URL" php ./vendor/bin/phpunit
