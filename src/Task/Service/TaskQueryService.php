@@ -26,10 +26,12 @@ final class TaskQueryService
 
     public function list(User $currentUser, array $filters, bool $restrictToUserScope, int $offset, int $limit, string $sortBy, string $direction): array
     {
-        $qb = $this->taskRepository->createQueryBuilder('t');
+        $qb = $this->taskRepository->createQueryBuilder('t')
+            ->leftJoin('t.assignedUsers', 'au')
+            ->leftJoin('au.profile_image', 'au_img')
+            ->addSelect('au', 'au_img');
 
         if ($restrictToUserScope) {
-            $qb->leftJoin('t.assignedUsers', 'au');
             $qb->andWhere('t.created_by_user = :current OR au = :current')
                 ->setParameter('current', $currentUser);
         }
@@ -47,12 +49,7 @@ final class TaskQueryService
         }
 
         if ($filters['assigned_to_user_id'] !== null) {
-            if (!isset($qb->getDQLPart('join')['t']) || !array_key_exists('au', $qb->getDQLPart('join')['t'])) {
-                $qb->leftJoin('t.assignedUsers', 'au_filter');
-                $qb->andWhere('au_filter.id = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
-            } else {
-                $qb->andWhere('au.id = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
-            }
+            $qb->andWhere('au.id = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
         }
 
         if ($filters['created_by_user_id'] !== null) {
@@ -94,6 +91,9 @@ final class TaskQueryService
         $qb = $this->taskRepository->createQueryBuilder('t')
             ->leftJoin('t.project', 'p')
             ->leftJoin('p.teamLeads', 'tl')
+            ->leftJoin('t.assignedUsers', 'au')
+            ->leftJoin('au.profile_image', 'au_img')
+            ->addSelect('au', 'au_img')
             ->setParameter('current', $teamLead);
 
         $qb->andWhere($qb->expr()->orX('tl = :current', 't.project IS NULL AND t.created_by_user = :current'));
@@ -111,8 +111,7 @@ final class TaskQueryService
         }
 
         if ($filters['assigned_to_user_id'] !== null) {
-            $qb->leftJoin('t.assignedUsers', 'au_filter');
-            $qb->andWhere('au_filter.id = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
+            $qb->andWhere('au.id = :assignedUserId')->setParameter('assignedUserId', $filters['assigned_to_user_id']);
         }
 
         if ($filters['created_by_user_id'] !== null) {
