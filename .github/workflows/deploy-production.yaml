@@ -92,6 +92,10 @@ jobs:
           if [[ -f compose.prod.local.yaml ]]; then
             COMPOSE_ARGS+=(-f compose.prod.local.yaml)
           fi
+          if [[ -f compose.edge.yaml ]]; then
+            docker network create edge >/dev/null 2>&1 || true
+            COMPOSE_ARGS+=(-f compose.edge.yaml)
+          fi
 
           # - Build/start, then migrate
           docker compose "${COMPOSE_ARGS[@]}" up -d --build --wait
