@@ -16,7 +16,7 @@ Two separate stacks are used:
 - does not expose public HTTP ports in production
 - joins shared external Docker network `edge` with alias `todo-backend`
 
-2. Edge proxy stack (`infra/edge-proxy/`)
+2. Edge proxy stack (separate repository, example checkout path `/opt/edge-proxy`)
 - runs public Nginx on ports `80/443`
 - runs Certbot for certificate issuance and renewals
 - routes `/todo/*` to `todo-backend:80`
@@ -51,7 +51,7 @@ This attaches the `php` service to external network `edge` with alias `todo-back
 ## Step 3: Start central proxy stack
 
 ```bash
-cd infra/edge-proxy
+cd /opt/edge-proxy
 cp compose.env.example compose.env
 ```
 
@@ -88,11 +88,11 @@ Example:
 
 1. In another project, attach app service to external network `edge`.
 2. Assign a unique network alias (example `notes-backend`).
-3. Add route file in `infra/edge-proxy/nginx/routes/notes.conf`.
+3. Add route file in `/opt/edge-proxy/nginx/routes/notes.conf`.
 4. Reload Nginx:
 
 ```bash
-cd infra/edge-proxy
+cd /opt/edge-proxy
 docker compose exec reverse-proxy nginx -s reload
 ```
 

@@ -28,6 +28,7 @@ This backend is designed to run behind a central Nginx reverse proxy.
 
 Use the dedicated guide:
 - [`docs/reverse-proxy-letsencrypt.md`](docs/reverse-proxy-letsencrypt.md)
+  (the edge proxy stack is intentionally maintained in a separate repository)
 
 ## JWT Authentication
 
